@@ -12,9 +12,10 @@ platform :ios do
     build_app(
       scheme: "App",
       export_method: "app-store",
-      xcargs: "DEVELOPMENT_TEAM=#{ENV['DEVELOPMENT_TEAM']}",
+      xcargs: "DEVELOPMENT_TEAM=#{ENV['DEVELOPMENT_TEAM']} -sdk iphoneos",
       output_directory: "build"
     )
+    
 
     upload_to_testflight(api_key: api_key)
   end
