@@ -1,5 +1,6 @@
 {
   "appId": "com.cuewave.net",
-  "appName": "cuewave",
-  "webDir": "dist"
+  "appName": "CueWave",
+  "webDir": "dist",
+  "bundledWebRuntime": false
 }
