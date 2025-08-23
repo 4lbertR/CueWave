@@ -1,0 +1,58 @@
+name: iOS (Capacitor) → TestFlight
+
+on:
+  push:
+    branches: [ main ]   # runs on every push to main branch
+  workflow_dispatch:      # also allow manual run from the Actions tab
+
+jobs:
+  ios-build:
+    runs-on: macos-latest
+
+    steps:
+      # Pull your repo code
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Setup Node for React build
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      # Install deps and build React app
+      - name: Install deps & build web
+        run: |
+          npm ci
+          npm run build
+
+      # Sync web build into iOS Capacitor shell
+      - name: Capacitor sync iOS
+        run: npx cap sync ios
+
+      # Setup Ruby (needed for Fastlane)
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2
+
+      - name: Install fastlane
+        run: gem install fastlane
+
+      # Build and upload via Fastlane
+      - name: Build & Upload to TestFlight
+        working-directory: ios/App
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+        run: fastlane beta
+
+      # Save the .ipa as a downloadable artifact too (optional)
+      - name: Save IPA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: ios/App/build/*.ipa
