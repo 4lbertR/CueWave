@@ -1,0 +1,522 @@
+.cuewave-app {
+  aspect-ratio: 4 / 3;
+  margin: 0 auto;
+  background: white; 
+  position: relative;
+  transition: transform 0.3s ease-in-out;
+  transform-origin: center center;
+}
+
+.compact-mode .cuewave-app {
+  transform: translateX(-10vw) scaleX(0.8);
+}
+
+button {
+  outline: none !important;
+}
+
+button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+button:active {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* HEADER BUTTONS */
+.headerbutton {
+  font-size: clamp(16px, 1.8vw, 30px);
+  background-color: #AAA;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 20vw;
+  height: 4.2vw;
+}
+
+.headerOpen {
+  position: absolute;
+  top: 0.7vw;
+  left: 2vw;
+}
+
+.headerSettings {
+  position: absolute;
+  top: 0.7vw;
+  right: 2vw;
+}
+
+/* MIXER ARROW*/
+.compact-mode .immune-element {
+  transform: scaleX(1.428571); 
+}
+
+.MixerArrow {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  position: absolute;
+  right: 0vw;
+  bottom: 0vw;
+}
+
+.MixerArrow img {
+  width: 10vw;
+  height: 10vw;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* FADE BUTTONS */
+.fadebutton {
+  font-size: clamp(16px, 1.8vw, 30px);
+  background-color: #000;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 12vw;
+  height: 5.9vw;
+}
+
+.fade-in-a-button {
+  position: absolute;
+  left: 5.3vw;
+  bottom: 20vw; 
+}
+
+.fade-out-a-button {
+  position: absolute;
+  left: 26.3vw;
+  bottom: 20vw; 
+}
+
+.fade-next-a-button {
+  position: absolute;
+  left: 15.8vw;
+  bottom: 13vw; 
+}
+
+.fade-in-b-button {
+  position: absolute;
+  right: 5.3vw;
+  bottom: 20vw; 
+}
+
+.fade-out-b-button {
+  position: absolute;
+  right: 26.3vw;
+  bottom: 20vw; 
+}
+
+.fade-next-b-button {
+  position: absolute;
+  right: 15.8vw;
+  bottom: 13vw; 
+}
+
+.cf-a-b-button {
+  position: absolute;
+  left: 43.7vw;
+  bottom: 43.4vw; 
+}
+
+.cf-b-a-button {
+  position: absolute;
+  left: 43.7vw;
+  bottom: 35.4vw; 
+}
+
+.fade-slider-div {
+  position: absolute;
+  bottom: 10vw;
+  left: 39.6vw;
+  transform: scale(150%);
+  text-align: center;
+}
+
+.fade-slider-div label {
+  display: block;
+  font-size: 1.8vw;
+  margin-bottom: 1vw;
+  color: #333;
+}
+
+.slider-container {
+  position: relative;
+  width: 20vw;
+  margin: 0 auto;
+}
+
+.fade-slider {
+  width: 95%;
+  height: 0.6vw;
+  background: #000;
+  color: #000;
+  border-radius: 0.3vw;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Webkit browsers (Chrome, Safari) */
+.fade-slider::-webkit-slider-track {
+  width: 100%;
+  height: 0.6vw;
+  background: #000;
+  border-radius: 0.3vw;
+}
+
+.fade-slider::-webkit-slider-thumb {
+  width: 1vw;
+  height: 1vw;
+  background: #333;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  top: 0;
+  margin-top: 0;
+}
+
+/* Firefox */
+.fade-slider::-moz-range-track {
+  width: 100%;
+  height: 0.6vw;
+  background: #000;
+  border-radius: 0.3vw;
+  border: none;
+}
+
+.fade-slider::-moz-range-thumb {
+  width: 1vw;
+  height: 1vw;
+  background: #333;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  margin-top: 0;
+}
+
+.slider-tooltip {
+  position: absolute;
+  top: 2.5vw;
+  transform: translateX(-50%);
+  font-size: 1.2vw;
+  color: #333;
+  font-weight: bold;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.slider-ticks {
+  position: absolute;
+  top: -0.5vw;
+  left: 0;
+  right: 0;
+  height: 1.6vw;
+  pointer-events: none;
+}
+
+.tick-mark {
+  position: absolute;
+  width: 0.15vw;
+  height: 100%;
+  background: #000;
+  transform: translateX(-50%);
+}
+
+.tick-mark:first-child,
+.tick-mark:last-child {
+  width: 0.2vw;
+  background: #000;
+}
+
+/* PLAY/STOP BUTTONS*/
+.playstopbutton {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  width: 5.9vw; 
+  height: 5.9vw;
+}
+
+.playstopbutton img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.play-a-button {
+  position: absolute;
+  left: 19vw;
+  bottom: 20vw; 
+}
+
+.play-b-button {
+  position: absolute;
+  right: 19vw;
+  bottom: 20vw; 
+}
+
+/* TRACK LISTS */
+.track-lists-container {
+  position: absolute;
+  top: 6vw;
+  left: 2vw;
+  right: 2vw;
+  height: 40vw;
+  display: flex;
+  gap: 14vw;
+  justify-content: space-between;
+}
+
+.track-list-container {
+  flex: 1;
+  border: 2px solid #333;
+  border-radius: 8px;
+  background: white;
+  overflow: hidden;
+}
+
+.track-list-container h3 {
+  margin: 0;
+  padding: 10px;
+  background: #333;
+  color: white;
+  font-size: 16px;
+  text-align: center;
+}
+
+.track-list {
+  height: calc(100% - 45px);
+  overflow-y: auto;
+  background: white;
+}
+
+.track-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5vw 2vw;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 2vw;
+}
+
+.track-item:hover {
+  background-color: #f5f5f5;
+}
+
+.track-item.selected {
+  background-color: #333;
+  color: white;
+}
+
+.track-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 10px;
+}
+
+.track-duration {
+  color: #666;
+  font-size: 2vw;
+  min-width: 4vw;
+}
+
+.track-item.selected .track-duration {
+  color: #ccc;
+}
+
+.track-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.track-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.track-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.track-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* MIXER PANEL - PROPER VERTICAL SLIDERS */
+.mixer-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 20vw;
+  background: white;
+  border-left: 2px solid #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2vw;
+  padding: 4vw 2vw;
+  transition: transform 0.3s ease-in-out;
+  z-index: 50;
+}
+
+.mixer-hidden {
+  transform: translateX(100%);
+}
+
+.mixer-visible {
+  transform: translateX(0);
+}
+
+.mixer-fader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 70vh;
+  gap: 1vw;
+}
+
+.fader-label {
+  font-size: 3vw;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 2vw;
+}
+
+.fader-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  width: 6vw;
+  height: 50vh;
+  background: #000;
+  border-radius: 3px;
+}
+
+/* VERTICAL SLIDER - USING NATIVE HTML RANGE */
+.vertical-fader {
+  width: 50vh;
+  height: 6vw;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  transform: rotate(-90deg);
+  transform-origin: center center;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Chrome/Safari/Edge - Webkit browsers */
+.vertical-fader::-webkit-slider-track {
+  width: 50vh;
+  height: 6vw;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.vertical-fader::-webkit-slider-thumb {
+  width: 3vw;
+  height: 8vw;
+  background: linear-gradient(135deg, #aaa 0%, #777 50%, #444 100%);
+  border: 2px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  transition: all 0.1s ease;
+}
+
+.vertical-fader::-webkit-slider-thumb:hover {
+  background: linear-gradient(135deg, #bbb 0%, #888 50%, #555 100%);
+  transform: scale(1.1);
+}
+
+.vertical-fader::-webkit-slider-thumb:active {
+  background: linear-gradient(135deg, #ccc 0%, #999 50%, #666 100%);
+  transform: scale(0.95);
+}
+
+/* Firefox */
+.vertical-fader::-moz-range-track {
+  width: 50vh;
+  height: 6vw;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.vertical-fader::-moz-range-thumb {
+  width: 3vw;
+  height: 8vw;
+  background: linear-gradient(135deg, #aaa 0%, #777 50%, #444 100%);
+  border: 2px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  transition: all 0.1s ease;
+}
+
+.vertical-fader::-moz-range-thumb:hover {
+  background: linear-gradient(135deg, #bbb 0%, #888 50%, #555 100%);
+  transform: scale(1.1);
+}
+
+.vertical-fader::-moz-range-thumb:active {
+  background: linear-gradient(135deg, #ccc 0%, #999 50%, #666 100%);
+  transform: scale(0.95);
+}
+
+.mute-button {
+  width: 4vw;
+  height: 4vw;
+  background: #ccc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 2vw;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 2vw;
+}
+
+.mute-button:hover {
+  background: #999;
+}
+
+.mute-button.active {
+  background: #ff4444;
+}
