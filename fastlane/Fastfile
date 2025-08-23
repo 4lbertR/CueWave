@@ -9,8 +9,6 @@ platform :ios do
       key_content: ENV["APP_STORE_CONNECT_PRIVATE_KEY"]
     )
 
-    create_keychain(name: "ci", default_keychain: true, unlock: true, timeout: 3600, lock_when_sleeps: false)
-
     build_app(
       scheme: "App",
       export_method: "app-store",
@@ -19,8 +17,5 @@ platform :ios do
     )
 
     upload_to_testflight(api_key: api_key)
-
-  ensure
-    delete_keychain(name: "ci")
   end
 end
