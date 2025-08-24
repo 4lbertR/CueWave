@@ -7,7 +7,7 @@ on:
 
 jobs:
   ios-build:
-    runs-on: macos-latest
+    runs-on: macos-13  # Change from macos-14 to macos-13
 
     steps:
       # Pull your repo code
