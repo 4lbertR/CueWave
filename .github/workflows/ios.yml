@@ -20,11 +20,12 @@ jobs:
 
       - name: Debug decoded certificate
         run: |
+          echo secrets.IOS_CERTIFICATE_P12 | head -c 30
           file certificate.p12
           openssl pkcs12 -info -in certificate.p12 -nokeys -passin pass:"${{ secrets.IOS_CERTIFICATE_PASSWORD }}"
 
       - name: Install certificate and provisioning profile
-        run: |
+        run: | 
           security create-keychain -p "" build.keychain
           security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
           security list-keychains -s build.keychain
