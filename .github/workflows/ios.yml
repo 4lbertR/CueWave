@@ -1,72 +1,47 @@
-name: iOS (Capacitor) → TestFlight
+name: iOS Build and TestFlight Upload
 
 on:
   push:
-    branches: [ main ]   # runs on every push to main branch
-  workflow_dispatch:      # also allow manual run from the Actions tab
+    branches:
+      - main
 
 jobs:
-  ios-build:
-    runs-on: macos-13  # Change from macos-14 to macos-13
+  build:
+    runs-on: macos-latest
 
     steps:
-      # Pull your repo code
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      # Install deps and build React app
-      - name: Install deps & build web
+      - name: Decode certificate and provisioning profile
         run: |
-          npm ci
-          npm run build
+          echo "${{ secrets.IOS_CERTIFICATE_P12 }}" | base64 --decode > certificate.p12
+          echo "${{ secrets.IOS_PROVISIONING_PROFILE }}" | base64 --decode > profile.mobileprovision
 
-      # Sync web build into iOS Capacitor shell
-      - name: Capacitor sync iOS
-        run: npx cap sync ios
+      - name: Install certificate and provisioning profile
+        run: |
+          security create-keychain -p "" build.keychain
+          security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security list-keychains -s build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      # Setup Ruby (needed for Fastlane)
-      - name: Setup Ruby
+      - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.2
 
-      - name: List available Xcode versions
+      - name: Install Bundler and dependencies
         run: |
-          ls -la /Applications/ | grep -i xcode
-          which xcodebuild
-          xcodebuild -version
+          gem install bundler
+          bundle install
 
-      - name: Select Xcode 15
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app
-
-      - name: Download provisioning profiles and certificates
-        run: |
-          gem install fastlane
-          fastlane match development --readonly
-        env:
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
-
-      # Build and upload via Fastlane
       - name: Build & Upload to TestFlight
-        working-directory: ios/App
+        run: bundle exec fastlane ios beta
         env:
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
-        run: fastlane beta
-
-      # Save the .ipa as a downloadable artifact too (optional)
-      - name: Save IPA artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-ipa
