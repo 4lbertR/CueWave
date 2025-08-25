@@ -9,7 +9,6 @@ jobs:
   build:
     runs-on: macos-latest
 
-
     steps:
       - name: Checkout code 
         uses: actions/checkout@v4
@@ -19,12 +18,16 @@ jobs:
           echo "${{ secrets.IOS_CERTIFICATE_P12 }}" | base64 --decode > certificate.p12
           echo "${{ secrets.IOS_PROVISIONING_PROFILE }}" | base64 --decode > profile.mobileprovision
 
+      - name: Debug decoded certificate
+        run: |
+          file certificate.p12
+          openssl pkcs12 -info -in certificate.p12 -nokeys -passin pass:"${{ secrets.IOS_CERTIFICATE_PASSWORD }}"
+
       - name: Install certificate and provisioning profile
         run: |
           security create-keychain -p "" build.keychain
           security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
           security list-keychains -s build.keychain
-          
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
