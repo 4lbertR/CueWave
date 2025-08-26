@@ -143,7 +143,7 @@ function App() {
             <div className="track-list">
               {deckATracks.map((track) => (
                 <div 
-                  key={track.id}
+                  key={track.id} 
                   className={`track-item ${selectedTrackA?.id === track.id ? 'selected' : ''}`}
                   onClick={() => setSelectedTrackA(track)}
                 >
@@ -158,7 +158,7 @@ function App() {
             <h3>Deck B Playlist</h3>
             <div className="track-list">
               {deckBTracks.map((track) => (
-                <div 
+                <div  
                   key={track.id}
                   className={`track-item ${selectedTrackB?.id === track.id ? 'selected' : ''}`}
                   onClick={() => setSelectedTrackB(track)}
