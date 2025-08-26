@@ -129,7 +129,7 @@ function App() {
           </button>
 
           <button onClick={fadeOutBPressed} className="fadebutton fade-out-b-button">
-            Fade Out
+            Fade Out 
           </button>
 
           <button onClick={fadeNextBPressed} className="fadebutton fade-next-b-button">
