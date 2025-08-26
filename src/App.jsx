@@ -9,9 +9,9 @@ const fadeOutAPressed = () => {
 };
 const playAPressed = () => {
   console.log("Play A Clicked!");
-};
+}; 
 const fadeNextAPressed = () => {
-  console.log("Fade Next A Clicked!");
+  console.log("Fade Next A Clicked!"); 
 };
 
 const fadeInBPressed = () => {
