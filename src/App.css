@@ -225,7 +225,7 @@ button:focus-visible {
   font-size: 1.2vw; 
   color: #333;
   font-weight: bold;
-  white-space: nowrap;
+  white-space: nowrap; 
   z-index: 10; 
 } 
 
