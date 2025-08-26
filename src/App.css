@@ -234,11 +234,11 @@ button:focus-visible {
   left: 0;
   width: 100%;
   height: 1.6vw;
-  pointer-events: none;
+  pointer-events: none; 
 }
 
 .tick-mark {
-  position: absolute;
+  position: absolute; 
   width: 0.15vw;
   height: 100%;
   background: #000;
