@@ -126,7 +126,7 @@ function App() {
 
           <button onClick={playBPressed} className="playstopbutton play-b-button">
             <img src="src/assets/play.svg" alt="" />
-          </button>
+           </button>
 
           <button onClick={fadeOutBPressed} className="fadebutton fade-out-b-button">
             Fade Out 
