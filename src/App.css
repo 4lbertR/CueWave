@@ -232,7 +232,7 @@ button:focus-visible {
 .slider-ticks {
   position: absolute;
   left: 0;
-  width: 100%;
+  width: 100%; 
   height: 1.6vw;
   pointer-events: none;  
 }
