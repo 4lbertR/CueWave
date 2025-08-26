@@ -246,7 +246,7 @@ button:focus-visible {
   /* Add a variable for left: */
   left: calc(var(--tick-percent, 0) * 1%);
 }
-.tick-mark:first-child,
+.tick-mark:first-child, 
 .tick-mark:last-child {
   width: 0.2vw;
   background: #000;
