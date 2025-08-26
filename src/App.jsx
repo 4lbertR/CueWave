@@ -147,7 +147,7 @@ function App() {
                   className={`track-item ${selectedTrackA?.id === track.id ? 'selected' : ''}`}
                   onClick={() => setSelectedTrackA(track)}
                 >
-                  <span className="track-name">{track.name}</span>
+                  <span className="track-name">{track.name}</span> 
                   <span className="track-duration">{track.duration}</span>
                 </div>
               ))}
