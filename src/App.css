@@ -222,7 +222,7 @@ button:focus-visible {
   position: absolute;
   top: 2.5vw;
   transform: translateX(-50%);
-  font-size: 1.2vw;
+  font-size: 1.2vw; 
   color: #333;
   font-weight: bold;
   white-space: nowrap;
