@@ -231,9 +231,8 @@ button:focus-visible {
 
 .slider-ticks {
   position: absolute;
-  top: -0.5vw;
   left: 0;
-  right: 0;
+  width: 100%;
   height: 1.6vw;
   pointer-events: none;
 }
@@ -244,8 +243,9 @@ button:focus-visible {
   height: 100%;
   background: #000;
   transform: translateX(-50%);
+  /* Add a variable for left: */
+  left: calc(var(--tick-percent, 0) * 1%);
 }
-
 .tick-mark:first-child,
 .tick-mark:last-child {
   width: 0.2vw;
@@ -465,36 +465,6 @@ button:focus-visible {
 }
 
 .vertical-fader::-webkit-slider-thumb:active {
-  background: linear-gradient(135deg, #ccc 0%, #999 50%, #666 100%);
-  transform: scale(0.95);
-}
-
-/* Firefox */
-.vertical-fader::-moz-range-track {
-  width: 50vh;
-  height: 6vw;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-}
-
-.vertical-fader::-moz-range-thumb {
-  width: 3vw;
-  height: 8vw;
-  background: linear-gradient(135deg, #aaa 0%, #777 50%, #444 100%);
-  border: 2px solid #333;
-  border-radius: 4px;
-  cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-  transition: all 0.1s ease;
-}
-
-.vertical-fader::-moz-range-thumb:hover {
-  background: linear-gradient(135deg, #bbb 0%, #888 50%, #555 100%);
-  transform: scale(1.1);
-}
-
-.vertical-fader::-moz-range-thumb:active {
   background: linear-gradient(135deg, #ccc 0%, #999 50%, #666 100%);
   transform: scale(0.95);
 }
