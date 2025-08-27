@@ -290,6 +290,100 @@ class CapacitorFileManager {
     }
   }
 
+  async saveUncategorizedFile(fileData) {
+    const path = `${this.cuewaveDir}/uncategorized`;
+    
+    if (!this.isCapacitor) {
+      return this.saveUncategorizedToLocalStorage(fileData);
+    }
+
+    try {
+      await this.ensureCuewaveDirectory();
+      
+      // Create uncategorized directory
+      await Filesystem.mkdir({
+        path: path,
+        directory: Directory.Documents,
+        recursive: true
+      });
+
+      // Save file metadata
+      const metadataPath = `${path}/metadata.json`;
+      let existingFiles = [];
+      
+      try {
+        const existing = await Filesystem.readFile({
+          path: metadataPath,
+          directory: Directory.Documents,
+          encoding: Encoding.UTF8
+        });
+        existingFiles = JSON.parse(existing.data).files || [];
+      } catch (e) {
+        // File doesn't exist yet
+      }
+
+      // Add new file to list
+      existingFiles.push({
+        id: fileData.id,
+        name: fileData.name,
+        duration: fileData.duration,
+        size: fileData.size,
+        type: fileData.type,
+        location: 'uncategorized'
+      });
+
+      // Save updated metadata
+      await Filesystem.writeFile({
+        path: metadataPath,
+        data: JSON.stringify({ files: existingFiles }, null, 2),
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8
+      });
+
+      // Save the actual audio file if provided
+      if (fileData.file && fileData.file instanceof File) {
+        await this.saveAudioFile(fileData.file, path);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error saving uncategorized file:', error);
+      return false;
+    }
+  }
+
+  async getUncategorizedFiles() {
+    const path = `${this.cuewaveDir}/uncategorized/metadata.json`;
+    
+    try {
+      const result = await Filesystem.readFile({
+        path: path,
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8
+      });
+      
+      const data = JSON.parse(result.data);
+      return data.files || [];
+    } catch (error) {
+      // No uncategorized files yet
+      return [];
+    }
+  }
+
+  // LocalStorage fallback for uncategorized
+  saveUncategorizedToLocalStorage(fileData) {
+    try {
+      const stored = localStorage.getItem('cuewave_uncategorized') || '[]';
+      const uncategorized = JSON.parse(stored);
+      uncategorized.push(fileData);
+      localStorage.setItem('cuewave_uncategorized', JSON.stringify(uncategorized));
+      return true;
+    } catch (error) {
+      console.error('Error saving uncategorized to localStorage:', error);
+      return false;
+    }
+  }
+
   // Fallback methods for web
   readFromLocalStorage() {
     try {

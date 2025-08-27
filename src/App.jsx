@@ -282,8 +282,11 @@ function App() {
     setPlaylists(library.playlists || []);
     setFolders(library.folders || []);
     
+    // Get uncategorized files
+    const uncategorizedFiles = await capacitorFileManager.getUncategorizedFiles();
+    
     // Collect all files from library
-    const files = [];
+    const files = [...uncategorizedFiles]; // Start with uncategorized
     const collectFiles = (item, location = '') => {
       if (item.tracks) {
         item.tracks.forEach(track => {
@@ -306,7 +309,7 @@ function App() {
     library.folders?.forEach(folder => collectFiles(folder));
     
     setAllFiles(files);
-    console.log('Updated library:', library);
+    console.log('Updated library:', library, 'Uncategorized:', uncategorizedFiles);
   };
 
   const handleSelectPlaylistFromSidebar = async (playlist, action) => {
@@ -487,30 +490,21 @@ function App() {
           });
           
           if (audioFiles.length > 0) {
-            // Add duration to each file
-            const filesWithDuration = [];
+            // Add duration to each file and save as uncategorized
             for (const file of audioFiles) {
               const duration = await capacitorFileManager.getAudioDuration(file);
-              filesWithDuration.push({ 
+              // Save each file directly as uncategorized (no playlist)
+              await capacitorFileManager.saveUncategorizedFile({
                 id: Date.now() + Math.random(),
                 name: file.name,
                 file: file,
                 duration: duration,
                 size: file.size,
-                type: file.type || 'audio/mpeg'
+                type: file.type || 'audio/mpeg',
+                location: 'uncategorized'
               });
             }
             
-            // Create playlist and save to library
-            const playlist = {
-              id: Date.now(),
-              name: `Import ${new Date().toLocaleDateString()}`,
-              tracks: filesWithDuration,
-              created: Date.now()
-            };
-            
-            // Save to storage
-            await capacitorFileManager.savePlaylist(playlist);
             await updatePlaylistsDisplay();
           } else {
             alert('No audio files selected');

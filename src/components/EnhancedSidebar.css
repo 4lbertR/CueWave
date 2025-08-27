@@ -474,13 +474,14 @@
 
 /* Context Menu */
 .context-menu {
+  position: fixed !important;
   background: #2a2a2a;
   border: 2px solid #444;
   border-radius: 12px;
   padding: 0.5rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  z-index: 2000;
-  min-width: 200px;
+  z-index: 3000 !important;
+  min-width: 220px;
 }
 
 .context-menu-item {
@@ -514,7 +515,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1999;
+  z-index: 2999;
+  background: transparent;
 }
 
 /* Uncategorized Section */

@@ -216,11 +216,14 @@ function EnhancedSidebar({
     e.preventDefault();
     e.stopPropagation();
     
-    // Show context menu
+    // Show context menu with better positioning
     const rect = e.currentTarget.getBoundingClientRect();
+    const menuX = Math.min(rect.left + rect.width / 2, window.innerWidth - 150);
+    const menuY = Math.min(rect.bottom + 5, window.innerHeight - 200);
+    
     setContextMenu({
-      x: rect.left + rect.width / 2,
-      y: rect.bottom,
+      x: menuX,
+      y: menuY,
       playlist: playlist
     });
   };
@@ -491,50 +494,52 @@ function EnhancedSidebar({
         
         {/* Context Menu */}
         {contextMenu && (
-          <div 
-            className="context-menu"
-            style={{ 
-              position: 'fixed',
-              left: contextMenu.x,
-              top: contextMenu.y,
-              transform: 'translateX(-50%)'
-            }}
-          >
-            <button 
-              className="context-menu-item"
-              onClick={() => {
-                onSelectPlaylist(contextMenu.playlist, 'deck');
-                setContextMenu(null);
-              }}
-            >
-              Add to Deck
-            </button>
-            <button 
-              className="context-menu-item"
-              onClick={() => {
-                onSelectPlaylist(contextMenu.playlist, 'edit');
-                setContextMenu(null);
-              }}
-            >
-              Edit Contents
-            </button>
-            <button 
-              className="context-menu-item cancel"
+          <>
+            <div 
+              className="context-menu-overlay"
               onClick={() => setContextMenu(null)}
+            />
+            <div 
+              className="context-menu"
+              style={{ 
+                left: `${contextMenu.x}px`,
+                top: `${contextMenu.y}px`,
+                transform: 'translateX(-50%)'
+              }}
             >
-              Cancel
-            </button>
-          </div>
+              <button 
+                className="context-menu-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectPlaylist(contextMenu.playlist, 'deck');
+                  setContextMenu(null);
+                }}
+              >
+                Add to Deck
+              </button>
+              <button 
+                className="context-menu-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectPlaylist(contextMenu.playlist, 'edit');
+                  setContextMenu(null);
+                }}
+              >
+                Edit Contents
+              </button>
+              <button 
+                className="context-menu-item cancel"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContextMenu(null);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
         )}
       </div>
-      
-      {/* Click outside to close context menu */}
-      {contextMenu && (
-        <div 
-          className="context-menu-overlay"
-          onClick={() => setContextMenu(null)}
-        />
-      )}
     </>
   );
 }
