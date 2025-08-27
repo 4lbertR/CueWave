@@ -21,8 +21,12 @@ class CapacitorFileManager {
       });
       return true;
     } catch (error) {
-      // Directory might already exist
-      return true;
+      // Directory might already exist, which is fine
+      if (error.code === 'OS-PLUG-FILE-0010') {
+        return true;
+      }
+      console.error('Error creating cuewave directory:', error);
+      return false;
     }
   }
 
@@ -177,6 +181,22 @@ class CapacitorFileManager {
     try {
       await this.ensureCuewaveDirectory();
       
+      // Check if directory exists and delete it if it does
+      try {
+        await Filesystem.stat({
+          path: path,
+          directory: Directory.Documents
+        });
+        // Directory exists, remove it first
+        await Filesystem.rmdir({
+          path: path,
+          directory: Directory.Documents,
+          recursive: true
+        });
+      } catch (statError) {
+        // Directory doesn't exist, which is fine
+      }
+      
       // Create playlist directory
       await Filesystem.mkdir({
         path: path,
@@ -320,7 +340,7 @@ class CapacitorFileManager {
     }
   }
 
-  async renamePlaylist(oldName, newName) {
+  async renamePlaylist(oldName, newName, currentLocation = null) {
     if (!this.isCapacitor) {
       // For localStorage version
       const library = this.readFromLocalStorage();
@@ -366,8 +386,15 @@ class CapacitorFileManager {
         newPlaylistName = `playlist-${newName.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
       }
       
-      const oldPath = `${this.cuewaveDir}/${oldPlaylistName}`;
-      const newPath = `${this.cuewaveDir}/${newPlaylistName}`;
+      // Handle folder paths
+      let oldPath, newPath;
+      if (currentLocation && currentLocation !== 'root') {
+        oldPath = `${this.cuewaveDir}/${currentLocation}/${oldPlaylistName}`;
+        newPath = `${this.cuewaveDir}/${currentLocation}/${newPlaylistName}`;
+      } else {
+        oldPath = `${this.cuewaveDir}/${oldPlaylistName}`;
+        newPath = `${this.cuewaveDir}/${newPlaylistName}`;
+      }
       
       // Read the existing metadata
       const metadataResult = await Filesystem.readFile({

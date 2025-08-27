@@ -41,16 +41,38 @@ function EnhancedSidebar({
     setExpandedItems(newExpanded);
   };
 
+  const findPlaylistLocation = (playlist) => {
+    // Check if playlist is in root
+    if (playlists.some(p => p.id === playlist.id)) {
+      return 'root';
+    }
+    
+    // Check folders
+    const checkFolders = (folderList, path = '') => {
+      for (const folder of folderList) {
+        const currentPath = path ? `${path}/${folder.name}` : folder.name;
+        
+        if (folder.playlists?.some(p => p.id === playlist.id)) {
+          return currentPath;
+        }
+        
+        if (folder.folders) {
+          const result = checkFolders(folder.folders, currentPath);
+          if (result) return result;
+        }
+      }
+      return null;
+    };
+    
+    return checkFolders(folders) || 'root';
+  };
+
   const handleRenameComplete = async (playlist) => {
     if (renameValue && renameValue !== formatPlaylistName(playlist.name)) {
-      // Update the playlist name
-      const updatedPlaylist = {
-        ...playlist,
-        name: renameValue
-      };
+      const location = findPlaylistLocation(playlist);
       
       // Save the renamed playlist
-      await capacitorFileManager.renamePlaylist(playlist.name, renameValue);
+      await capacitorFileManager.renamePlaylist(playlist.name, renameValue, location);
       await onRefresh();
     }
     setRenamingItem(null);
@@ -580,7 +602,9 @@ function EnhancedSidebar({
                 className="context-menu-item"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setRenameValue(formatPlaylistName(contextMenu.playlist.name));
+                  const displayName = contextMenu.playlist.displayName || 
+                                    formatPlaylistName(contextMenu.playlist.name);
+                  setRenameValue(displayName);
                   setRenamingItem(contextMenu.playlist);
                   setContextMenu(null);
                 }}
