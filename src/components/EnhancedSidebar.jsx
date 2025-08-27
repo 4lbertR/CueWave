@@ -23,7 +23,6 @@ function EnhancedSidebar({
   const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverItem, setDragOverItem] = useState(null);
-  const [selectedDeck, setSelectedDeck] = useState('A');
   const [searchQuery, setSearchQuery] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
   const [touchStart, setTouchStart] = useState(null);
@@ -349,16 +348,7 @@ function EnhancedSidebar({
         {hasSelection && (
           <div className="selection-actions">
             <span>{selectedFiles.size} selected</span>
-            <select 
-              value={selectedDeck} 
-              onChange={(e) => setSelectedDeck(e.target.value)}
-              className="deck-select"
-            >
-              <option value="A">Deck A</option>
-              <option value="B">Deck B</option>
-            </select>
-            <button onClick={() => handleLoadSelected('replace')}>Load</button>
-            <button onClick={() => handleLoadSelected('append')}>Append</button>
+            <button onClick={() => handleLoadSelected()}>Add to Deck</button>
             <button onClick={handleCreatePlaylistFromSelected}>Create Playlist</button>
             <button onClick={handleAddSelectedToPlaylist}>Add to Playlist</button>
           </div>
@@ -451,6 +441,17 @@ function EnhancedSidebar({
                         <div key={file.id} className="file-item uncategorized-file">
                           <span className="file-name">{file.name}</span>
                           <span className="file-duration">{formatDuration(file.duration)}</span>
+                          <button
+                            className="delete-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Delete file "${file.name}"?`)) {
+                                onDeleteItem(file, 'uncategorized');
+                              }
+                            }}
+                          >
+                            🗑
+                          </button>
                         </div>
                       ))}
                     {allFiles.filter(f => !f.location || f.location === 'uncategorized').length === 0 && (

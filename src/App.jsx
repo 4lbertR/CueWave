@@ -77,6 +77,39 @@ function App() {
         setPlaylists(library.playlists || []);
         setFolders(library.folders || []);
         
+        // Load uncategorized files
+        const uncategorizedFiles = await capacitorFileManager.getUncategorizedFiles();
+        
+        // Collect all files from library
+        const files = [...uncategorizedFiles]; // Start with uncategorized
+        const collectFiles = (item, location = '') => {
+          if (item.tracks) {
+            item.tracks.forEach(track => {
+              files.push({
+                ...track,
+                id: track.id || Date.now() + Math.random(),
+                location: location || item.name
+              });
+            });
+          }
+          if (item.folders) {
+            item.folders.forEach(folder => collectFiles(folder, folder.name));
+          }
+          if (item.playlists) {
+            item.playlists.forEach(playlist => collectFiles(playlist, location));
+          }
+        };
+        
+        // Collect from folders and playlists
+        library.folders.forEach(folder => collectFiles(folder, folder.name));
+        library.playlists.forEach(playlist => collectFiles(playlist, 'root'));
+        
+        setAllFiles(files);
+        
+        // Clear decks on startup
+        setDeckATracks([]);
+        setDeckBTracks([]);
+        
         // Also load IndexedDB files for iOS
         if (iosFileHandler.isIOS || iosFileHandler.isIPad) {
           const storedFiles = await iosFileHandler.getAllStoredFiles();
@@ -97,28 +130,8 @@ function App() {
   const [muteB, setMuteB] = useState(true);
   const [muteMaster, setMuteMaster] = useState(false);
 
-  const [deckATracks, setDeckATracks] = useState([
-    { id: 1, name: "Sample Track 1.mp3", duration: "3:45", path: "sample1.mp3" },
-    { id: 2, name: "Sample Track 2.mp3", duration: "4:12", path: "sample2.mp3" },
-    { id: 3, name: "Long Sample Track Name.mp3", duration: "2:58", path: "sample3.mp3" },
-    { id: 4, name: "Another Track.mp3", duration: "5:23", path: "sample4.mp3" },
-    { id: 5, name: "More Music.mp3", duration: "3:17", path: "sample5.mp3" },
-    { id: 6, name: "Sample Track 1.mp3", duration: "3:45", path: "sample1.mp3" },
-    { id: 7, name: "Sample Track 2.mp3", duration: "4:12", path: "sample2.mp3" },
-    { id: 8, name: "Long Sample Track Name.mp3", duration: "2:58", path: "sample3.mp3" },
-    { id: 9, name: "Another Track.mp3", duration: "5:23", path: "sample4.mp3" },
-    { id: 10, name: "More Music.mp3", duration: "3:17", path: "sample5.mp3" },
-    { id: 11, name: "Sample Track 1.mp3", duration: "3:45", path: "sample1.mp3" },
-    { id: 12, name: "Sample Track 2.mp3", duration: "4:12", path: "sample2.mp3" },
-    { id: 13, name: "Long Sample Track Name.mp3", duration: "2:58", path: "sample3.mp3" },
-    { id: 14, name: "Another Track.mp3", duration: "5:23", path: "sample4.mp3" },
-    { id: 15, name: "More Music.mp3", duration: "3:17", path: "sample5.mp3" },
-  ]);
-  
-  const [deckBTracks, setDeckBTracks] = useState([
-    { id: 6, name: "Deck B Track 1.mp3", duration: "4:05", path: "deckb1.mp3" },
-    { id: 7, name: "Deck B Track 2.mp3", duration: "3:31", path: "deckb2.mp3" },
-  ]);
+  const [deckATracks, setDeckATracks] = useState([]);
+  const [deckBTracks, setDeckBTracks] = useState([]);
 
   const [selectedTrackA, setSelectedTrackA] = useState(null);
   const [selectedTrackB, setSelectedTrackB] = useState(null);
@@ -462,6 +475,9 @@ function App() {
     } else if (type === 'folder') {
       // Delete folder and contents
       await capacitorFileManager.deleteFolder(item.name);
+    } else if (type === 'uncategorized') {
+      // Delete uncategorized file
+      await capacitorFileManager.deleteUncategorizedFile(item.id);
     }
     await updatePlaylistsDisplay();
   };
@@ -517,40 +533,52 @@ function App() {
       } else if (choice === 'files') {
         // Use iOS-compatible file import
         const files = await iosFileHandler.importFiles('files');
+        console.log('Files selected:', files);
         
         if (files && files.length > 0) {
-          // Fix the error by checking file.type properly
+          // Filter audio files with better checking
           const audioFiles = files.filter(file => {
-            if (file.type && typeof file.type === 'string') {
-              return file.type.startsWith('audio/');
+            // Check MIME type first
+            if (file.type && typeof file.type === 'string' && file.type.startsWith('audio/')) {
+              return true;
             }
-            // Check by extension if type is not available
-            const ext = file.name?.toLowerCase() || '';
-            return ['.mp3', '.m4a', '.aac', '.wav', '.aiff', '.flac'].some(audioExt => 
-              ext.endsWith(audioExt)
-            );
+            // Check by extension as fallback
+            const filename = file.name?.toLowerCase() || '';
+            const audioExtensions = ['.mp3', '.m4a', '.aac', '.wav', '.aiff', '.flac', '.ogg', '.opus', '.webm'];
+            return audioExtensions.some(ext => filename.endsWith(ext));
           });
           
           if (audioFiles.length > 0) {
+            console.log(`Importing ${audioFiles.length} audio files...`);
+            let successCount = 0;
+            
             // Add duration to each file and save as uncategorized
             for (const file of audioFiles) {
-              const duration = await capacitorFileManager.getAudioDuration(file);
-              // Save each file directly as uncategorized (no playlist)
-              await capacitorFileManager.saveUncategorizedFile({
-                id: Date.now() + Math.random(),
-                name: file.name,
-                file: file,
-                duration: duration,
-                size: file.size,
-                type: file.type || 'audio/mpeg',
-                location: 'uncategorized'
-              });
+              try {
+                const duration = await capacitorFileManager.getAudioDuration(file);
+                // Save each file directly as uncategorized (no playlist)
+                const saved = await capacitorFileManager.saveUncategorizedFile({
+                  id: Date.now() + Math.random(),
+                  name: file.name,
+                  file: file,
+                  duration: duration,
+                  size: file.size,
+                  type: file.type || 'audio/mpeg',
+                  location: 'uncategorized'
+                });
+                if (saved) successCount++;
+              } catch (err) {
+                console.error(`Failed to import ${file.name}:`, err);
+              }
             }
             
             await updatePlaylistsDisplay();
+            console.log(`Successfully imported ${successCount} of ${audioFiles.length} files`);
           } else {
-            alert('No audio files selected');
+            alert('No audio files selected. Please select audio files (MP3, M4A, WAV, etc.)');
           }
+        } else {
+          console.log('No files were selected');
         }
       }
     } catch (error) {

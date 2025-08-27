@@ -142,7 +142,11 @@ class CapacitorFileManager {
   }
 
   async savePlaylist(playlist, targetDeck = null) {
-    const playlistName = `playlist-${playlist.name.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+    // Check if the name already starts with "playlist-"
+    let playlistName = playlist.name;
+    if (!playlistName.startsWith('playlist-')) {
+      playlistName = `playlist-${playlist.name.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+    }
     const path = `${this.cuewaveDir}/${playlistName}`;
     
     if (!this.isCapacitor) {
@@ -345,8 +349,75 @@ class CapacitorFileManager {
   movePlaylistInLocalStorage(playlistName, targetLocation) {
     try {
       const library = this.readFromLocalStorage();
-      // Update playlist location in localStorage
-      // This is simplified - you'd need to track folder structure properly
+      
+      // Find the playlist to move
+      let playlistToMove = null;
+      let currentFolderId = null;
+      
+      // Check root level playlists
+      const rootIndex = library.playlists.findIndex(p => p.name === playlistName);
+      if (rootIndex >= 0) {
+        playlistToMove = library.playlists[rootIndex];
+        library.playlists.splice(rootIndex, 1);
+        currentFolderId = 'root';
+      }
+      
+      // Check in folders
+      if (!playlistToMove) {
+        const findInFolders = (folders, parentId = null) => {
+          for (const folder of folders) {
+            const playlistIndex = (folder.playlists || []).findIndex(p => p.name === playlistName);
+            if (playlistIndex >= 0) {
+              playlistToMove = folder.playlists[playlistIndex];
+              folder.playlists.splice(playlistIndex, 1);
+              currentFolderId = folder.id;
+              return true;
+            }
+            if (folder.folders && findInFolders(folder.folders, folder.id)) {
+              return true;
+            }
+          }
+          return false;
+        };
+        findInFolders(library.folders || []);
+      }
+      
+      if (!playlistToMove) {
+        console.error('Playlist not found:', playlistName);
+        return false;
+      }
+      
+      // Add to new location
+      if (targetLocation === 'root') {
+        library.playlists.push(playlistToMove);
+      } else {
+        // Find target folder and add playlist
+        const findFolder = (folders) => {
+          for (const folder of folders) {
+            if (folder.id === targetLocation || folder.name === targetLocation) {
+              if (!folder.playlists) folder.playlists = [];
+              folder.playlists.push(playlistToMove);
+              return true;
+            }
+            if (folder.folders && findFolder(folder.folders)) {
+              return true;
+            }
+          }
+          return false;
+        };
+        
+        if (!findFolder(library.folders || [])) {
+          // If folder not found, create it
+          if (!library.folders) library.folders = [];
+          library.folders.push({
+            id: targetLocation,
+            name: targetLocation,
+            playlists: [playlistToMove],
+            folders: []
+          });
+        }
+      }
+      
       localStorage.setItem('cuewave_library', JSON.stringify(library));
       return true;
     } catch (error) {
@@ -420,6 +491,12 @@ class CapacitorFileManager {
   async getUncategorizedFiles() {
     const path = `${this.cuewaveDir}/uncategorized/metadata.json`;
     
+    if (!this.isCapacitor) {
+      // Fallback to localStorage
+      const stored = localStorage.getItem('cuewave_uncategorized') || '[]';
+      return JSON.parse(stored);
+    }
+    
     try {
       const result = await Filesystem.readFile({
         path: path,
@@ -432,6 +509,52 @@ class CapacitorFileManager {
     } catch (error) {
       // No uncategorized files yet
       return [];
+    }
+  }
+  
+  async deleteUncategorizedFile(fileId) {
+    const path = `${this.cuewaveDir}/uncategorized/metadata.json`;
+    
+    if (!this.isCapacitor) {
+      // Delete from localStorage
+      try {
+        const stored = localStorage.getItem('cuewave_uncategorized') || '[]';
+        const uncategorized = JSON.parse(stored);
+        const filtered = uncategorized.filter(f => f.id !== fileId);
+        localStorage.setItem('cuewave_uncategorized', JSON.stringify(filtered));
+        return true;
+      } catch (error) {
+        console.error('Error deleting from localStorage:', error);
+        return false;
+      }
+    }
+    
+    try {
+      // Read existing metadata
+      const result = await Filesystem.readFile({
+        path: path,
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8
+      });
+      
+      const data = JSON.parse(result.data);
+      const files = data.files || [];
+      
+      // Filter out the deleted file
+      const updatedFiles = files.filter(f => f.id !== fileId);
+      
+      // Save updated metadata
+      await Filesystem.writeFile({
+        path: path,
+        data: JSON.stringify({ files: updatedFiles }, null, 2),
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting uncategorized file:', error);
+      return false;
     }
   }
 
