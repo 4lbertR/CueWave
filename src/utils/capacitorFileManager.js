@@ -87,10 +87,13 @@ class CapacitorFileManager {
 
       const metadata = JSON.parse(result.data);
       
+      // Extract just the playlist directory name, without the folder path
+      const playlistDirName = playlistName.split('/').pop();
+      
       return {
         id: metadata.id || Date.now(),
-        name: playlistName,
-        displayName: playlistName.replace('playlist-', ''),
+        name: playlistDirName,
+        displayName: playlistDirName.replace('playlist-', ''),
         tracks: metadata.tracks || [],
         created: metadata.created,
         modified: metadata.modified
