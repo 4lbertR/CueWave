@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './EnhancedSidebar.css';
 
 function EnhancedSidebar({ 
@@ -25,13 +25,16 @@ function EnhancedSidebar({
   const [dragOverItem, setDragOverItem] = useState(null);
   const [selectedDeck, setSelectedDeck] = useState('A');
   const [searchQuery, setSearchQuery] = useState('');
+  const [contextMenu, setContextMenu] = useState(null);
+  const [touchStart, setTouchStart] = useState(null);
+  const longPressTimer = useRef(null);
 
-  const toggleExpand = (itemId) => {
+  const toggleExpand = (itemId, forceExpand = false) => {
     const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(itemId)) {
-      newExpanded.delete(itemId);
-    } else {
+    if (forceExpand || !newExpanded.has(itemId)) {
       newExpanded.add(itemId);
+    } else {
+      newExpanded.delete(itemId);
     }
     setExpandedItems(newExpanded);
   };
@@ -54,6 +57,39 @@ function EnhancedSidebar({
 
   const deselectAll = () => {
     setSelectedFiles(new Set());
+  };
+
+  // iPad-style touch handling
+  const handleTouchStart = (e, item, type) => {
+    const touch = e.touches[0];
+    setTouchStart({ x: touch.clientX, y: touch.clientY, item, type });
+    
+    // Long press for drag
+    longPressTimer.current = setTimeout(() => {
+      setDraggedItem({ item, type });
+      // Haptic feedback if available
+      if (window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }, 500);
+  };
+
+  const handleTouchMove = (e) => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+    if (draggedItem) {
+      // Handle drag visualization
+      e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+    setDraggedItem(null);
+    setTouchStart(null);
   };
 
   const handleDragStart = (e, item, type) => {
@@ -115,7 +151,8 @@ function EnhancedSidebar({
     ).filter(Boolean);
     
     if (selected.length > 0) {
-      onLoadToDeck(selected, selectedDeck, action);
+      // Show deck selection modal
+      onLoadToDeck(selected, null, action); // null triggers modal
       setSelectedFiles(new Set());
     }
   };
@@ -140,17 +177,9 @@ function EnhancedSidebar({
     ).filter(Boolean);
     
     if (selected.length > 0) {
-      // Show playlist selection dialog
-      const playlistOptions = playlists.map(p => p.name).join('\n');
-      const targetPlaylist = prompt(`Select playlist:\n${playlistOptions}`);
-      
-      if (targetPlaylist) {
-        const playlist = playlists.find(p => p.name === targetPlaylist);
-        if (playlist) {
-          onAddToPlaylist(selected, playlist);
-          setSelectedFiles(new Set());
-        }
-      }
+      // Use proper playlist picker
+      onAddToPlaylist(selected, null); // null triggers picker
+      setSelectedFiles(new Set());
     }
   };
 
@@ -183,6 +212,19 @@ function EnhancedSidebar({
     );
   };
 
+  const handlePlaylistClick = (e, playlist) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Show context menu
+    const rect = e.currentTarget.getBoundingClientRect();
+    setContextMenu({
+      x: rect.left + rect.width / 2,
+      y: rect.bottom,
+      playlist: playlist
+    });
+  };
+
   const renderPlaylist = (playlist, indent = 0) => {
     const isExpanded = expandedItems.has(playlist.id);
     
@@ -190,38 +232,31 @@ function EnhancedSidebar({
       <div key={playlist.id} className="playlist-container">
         <div 
           className="sidebar-item playlist-item"
-          style={{ paddingLeft: `${indent + 20}px` }}
+          style={{ paddingLeft: `${indent}px` }}
           draggable
           onDragStart={(e) => handleDragStart(e, playlist, 'playlist')}
           onDragOver={(e) => handleDragOver(e, playlist, 'playlist')}
           onDrop={(e) => handleDrop(e, playlist, 'playlist')}
           onDragEnd={handleDragEnd}
+          onTouchStart={(e) => handleTouchStart(e, playlist, 'playlist')}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onClick={(e) => handlePlaylistClick(e, playlist)}
         >
           <span 
             className="expand-arrow"
-            onClick={() => toggleExpand(playlist.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleExpand(playlist.id);
+            }}
           >
             {isExpanded ? '▼' : '▶'}
           </span>
           <span className="item-icon">🎵</span>
-          <span 
-            className="item-name"
-            onClick={() => onSelectPlaylist(playlist)}
-          >
+          <span className="item-name">
             {formatPlaylistName(playlist.name)}
           </span>
           <span className="item-count">{playlist.tracks?.length || 0}</span>
-          <button
-            className="delete-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm(`Delete playlist "${playlist.name}"?`)) {
-                onDeleteItem(playlist, 'playlist');
-              }
-            }}
-          >
-            🗑
-          </button>
         </div>
         {renderPlaylistContents(playlist)}
       </div>
@@ -243,11 +278,12 @@ function EnhancedSidebar({
           onDragOver={(e) => handleDragOver(e, folder, 'folder')}
           onDrop={(e) => handleDrop(e, folder, 'folder')}
           onDragEnd={handleDragEnd}
+          onTouchStart={(e) => handleTouchStart(e, folder, 'folder')}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onClick={() => toggleExpand(folder.id)}
         >
-          <span 
-            className="folder-arrow"
-            onClick={() => toggleExpand(folder.id)}
-          >
+          <span className="folder-arrow">
             {isExpanded ? '▼' : '▶'}
           </span>
           <span className="item-icon">📁</span>
@@ -267,12 +303,22 @@ function EnhancedSidebar({
         
         {isExpanded && (
           <div className="folder-contents">
-            {folder.folders?.map(subFolder => 
-              renderFolder(subFolder, indent + 20)
-            )}
-            {folder.playlists?.map(playlist => 
-              renderPlaylist(playlist, indent + 20)
-            )}
+            {/* Render subfolders and playlists at same level */}
+            {[...(folder.folders || []), ...(folder.playlists || [])]
+              .sort((a, b) => {
+                // Folders first, then playlists
+                const aIsFolder = a.folders !== undefined;
+                const bIsFolder = b.folders !== undefined;
+                if (aIsFolder !== bIsFolder) return aIsFolder ? -1 : 1;
+                return (a.name || '').localeCompare(b.name || '');
+              })
+              .map(item => {
+                if (item.folders !== undefined) {
+                  return renderFolder(item, indent + 40);
+                } else {
+                  return renderPlaylist(item, indent + 40);
+                }
+              })}
           </div>
         )}
       </div>
@@ -379,12 +425,57 @@ function EnhancedSidebar({
         <div className="sidebar-content">
           {viewMode === 'folders' ? (
             <>
-              {folders.map(folder => renderFolder(folder, 0))}
-              {playlists
+              {/* Uncategorized section */}
+              <div className="uncategorized-section">
+                <div 
+                  className="sidebar-item uncategorized-header"
+                  onClick={() => toggleExpand('uncategorized')}
+                >
+                  <span className="folder-arrow">
+                    {expandedItems.has('uncategorized') ? '▼' : '▶'}
+                  </span>
+                  <span className="item-icon">📋</span>
+                  <span className="item-name">Uncategorized</span>
+                  <span className="item-count">
+                    {allFiles.filter(f => !f.location || f.location === 'uncategorized').length}
+                  </span>
+                </div>
+                {expandedItems.has('uncategorized') && (
+                  <div className="uncategorized-files">
+                    {allFiles
+                      .filter(f => !f.location || f.location === 'uncategorized')
+                      .map(file => (
+                        <div key={file.id} className="file-item uncategorized-file">
+                          <span className="file-name">{file.name}</span>
+                          <span className="file-duration">{formatDuration(file.duration)}</span>
+                        </div>
+                      ))}
+                    {allFiles.filter(f => !f.location || f.location === 'uncategorized').length === 0 && (
+                      <div className="empty-uncategorized">No uncategorized files</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Folders and playlists at root level */}
+              {[...folders, ...playlists
                 .filter(playlist => !folders.some(f => 
                   f.playlists?.some(p => p.id === playlist.id)
-                ))
-                .map(playlist => renderPlaylist(playlist, 0))}
+                ))]
+                .sort((a, b) => {
+                  // Folders first, then playlists
+                  const aIsFolder = a.folders !== undefined;
+                  const bIsFolder = b.folders !== undefined;
+                  if (aIsFolder !== bIsFolder) return aIsFolder ? -1 : 1;
+                  return (a.name || '').localeCompare(b.name || '');
+                })
+                .map(item => {
+                  if (item.folders !== undefined) {
+                    return renderFolder(item, 20);
+                  } else {
+                    return renderPlaylist(item, 20);
+                  }
+                })}
               
               {playlists.length === 0 && folders.length === 0 && (
                 <div className="sidebar-empty">
@@ -397,7 +488,53 @@ function EnhancedSidebar({
             renderAllFilesView()
           )}
         </div>
+        
+        {/* Context Menu */}
+        {contextMenu && (
+          <div 
+            className="context-menu"
+            style={{ 
+              position: 'fixed',
+              left: contextMenu.x,
+              top: contextMenu.y,
+              transform: 'translateX(-50%)'
+            }}
+          >
+            <button 
+              className="context-menu-item"
+              onClick={() => {
+                onSelectPlaylist(contextMenu.playlist, 'deck');
+                setContextMenu(null);
+              }}
+            >
+              Add to Deck
+            </button>
+            <button 
+              className="context-menu-item"
+              onClick={() => {
+                onSelectPlaylist(contextMenu.playlist, 'edit');
+                setContextMenu(null);
+              }}
+            >
+              Edit Contents
+            </button>
+            <button 
+              className="context-menu-item cancel"
+              onClick={() => setContextMenu(null)}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
+      
+      {/* Click outside to close context menu */}
+      {contextMenu && (
+        <div 
+          className="context-menu-overlay"
+          onClick={() => setContextMenu(null)}
+        />
+      )}
     </>
   );
 }

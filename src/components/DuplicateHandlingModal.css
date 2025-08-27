@@ -1,0 +1,112 @@
+.duplicate-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 500px;
+  background: #2a2a2a;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 2001;
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+}
+
+.duplicate-modal .modal-header {
+  padding: 1.5rem;
+  border-bottom: 2px solid #444;
+  background: linear-gradient(135deg, #333, #2a2a2a);
+}
+
+.duplicate-modal .modal-header h2 {
+  margin: 0;
+  color: white;
+  font-size: 1.4rem;
+  text-align: center;
+}
+
+.modal-content {
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.duplicate-message {
+  color: #ffa500;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.duplicate-question {
+  color: #ddd;
+  font-size: 1rem;
+}
+
+.duplicate-options {
+  padding: 1rem 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.option-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  background: #1a1a1a;
+  border: 2px solid #444;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-height: 80px;
+}
+
+.option-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.option-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.option-text {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.option-desc {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.add-duplicates:hover {
+  background: #1a3a1a;
+  border-color: #4a9eff;
+}
+
+.add-duplicates .option-icon {
+  color: #4a9eff;
+}
+
+.skip-duplicates:hover {
+  background: #3a3a1a;
+  border-color: #ffa500;
+}
+
+.skip-duplicates .option-icon {
+  color: #ffa500;
+}
+
+.cancel-operation:hover {
+  background: #3a1a1a;
+  border-color: #ff4444;
+}
+
+.cancel-operation .option-icon {
+  color: #ff4444;
+}

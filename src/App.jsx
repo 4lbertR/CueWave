@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import FolderImportDialog from './components/FolderImportDialog'
 import EnhancedSidebar from './components/EnhancedSidebar'
+import EditPlaylistModal from './components/EditPlaylistModal'
+import DuplicateHandlingModal from './components/DuplicateHandlingModal'
+import PlaylistPicker from './components/PlaylistPicker'
+import DeckSelectionDialog from './components/DeckSelectionDialog'
 import playlistManager from './utils/playlistManager'
 import iosFileHandler from './utils/iosFileHandler'
 import capacitorFileManager from './utils/capacitorFileManager'
@@ -57,6 +61,10 @@ function App() {
   const [playlists, setPlaylists] = useState([]);
   const [folders, setFolders] = useState([]);
   const [allFiles, setAllFiles] = useState([]);
+  const [editPlaylistModal, setEditPlaylistModal] = useState({ isOpen: false, playlist: null });
+  const [duplicateModal, setDuplicateModal] = useState({ isOpen: false, count: 0, playlistName: '', callback: null });
+  const [playlistPicker, setPlaylistPicker] = useState({ isOpen: false, callback: null });
+  const [deckSelectionDialog, setDeckSelectionDialog] = useState({ isOpen: false, files: [], callback: null });
 
   // Load stored files and library on mount
   useEffect(() => {
@@ -227,6 +235,20 @@ function App() {
   };
 
   const handleLoadToDeck = async (files, deck, action = 'replace') => {
+    // If deck is null, show deck selection dialog
+    if (!deck) {
+      setDeckSelectionDialog({
+        isOpen: true,
+        files: files,
+        callback: (selectedDeck, selectedAction) => {
+          if (selectedDeck) {
+            handleLoadToDeck(files, selectedDeck, selectedAction || action);
+          }
+        }
+      });
+      return;
+    }
+
     try {
       const tracks = files.map((file, index) => ({
         id: Date.now() + index,
@@ -287,10 +309,24 @@ function App() {
     console.log('Updated library:', library);
   };
 
-  const handleSelectPlaylistFromSidebar = async (playlist) => {
-    // Just close sidebar when playlist is selected
-    // User can then use deck buttons to load
-    setSidebarOpen(false);
+  const handleSelectPlaylistFromSidebar = async (playlist, action) => {
+    if (action === 'edit') {
+      // Open edit modal
+      setEditPlaylistModal({ isOpen: true, playlist });
+    } else if (action === 'deck') {
+      // Show deck selection
+      setDeckSelectionDialog({
+        isOpen: true,
+        files: playlist.tracks || [],
+        callback: (deck, loadAction) => {
+          if (deck) {
+            handleLoadToDeck(playlist.tracks, deck, loadAction);
+          }
+        }
+      });
+    } else {
+      setSidebarOpen(false);
+    }
   };
 
   const handleCreateFolder = async () => {
@@ -314,19 +350,48 @@ function App() {
   };
 
   const handleAddToPlaylist = async (files, targetPlaylist) => {
+    // If no target playlist, show picker
+    if (!targetPlaylist) {
+      setPlaylistPicker({
+        isOpen: true,
+        callback: (playlist) => {
+          if (playlist) {
+            handleAddToPlaylist(files, playlist);
+          }
+        }
+      });
+      return;
+    }
+
     // Check for duplicates
     const existingNames = new Set(targetPlaylist.tracks?.map(t => t.name) || []);
     const duplicates = files.filter(f => existingNames.has(f.name));
     
     if (duplicates.length > 0) {
-      const choice = confirm(`${duplicates.length} files already exist in the playlist. Add duplicates?`);
-      if (!choice) {
-        // Filter out duplicates
-        files = files.filter(f => !existingNames.has(f.name));
-      }
-    }
-    
-    if (files.length > 0) {
+      // Show duplicate modal with 3 options
+      setDuplicateModal({
+        isOpen: true,
+        count: duplicates.length,
+        playlistName: targetPlaylist.name.replace('playlist-', ''),
+        callback: async (choice) => {
+          if (choice === 'add') {
+            // Add all including duplicates
+            targetPlaylist.tracks = [...(targetPlaylist.tracks || []), ...files];
+            await capacitorFileManager.savePlaylist(targetPlaylist);
+            await updatePlaylistsDisplay();
+          } else if (choice === 'skip') {
+            // Add only non-duplicates
+            const nonDuplicates = files.filter(f => !existingNames.has(f.name));
+            if (nonDuplicates.length > 0) {
+              targetPlaylist.tracks = [...(targetPlaylist.tracks || []), ...nonDuplicates];
+              await capacitorFileManager.savePlaylist(targetPlaylist);
+              await updatePlaylistsDisplay();
+            }
+          }
+          // 'cancel' does nothing
+        }
+      });
+    } else if (files.length > 0) {
       targetPlaylist.tracks = [...(targetPlaylist.tracks || []), ...files];
       await capacitorFileManager.savePlaylist(targetPlaylist);
       await updatePlaylistsDisplay();
@@ -354,6 +419,23 @@ function App() {
       await capacitorFileManager.deleteFolder(item.name);
     }
     await updatePlaylistsDisplay();
+  };
+
+  const handleEditPlaylistSave = async (playlist, selectedFiles) => {
+    // Update playlist with selected files only
+    playlist.tracks = selectedFiles;
+    await capacitorFileManager.savePlaylist(playlist);
+    await updatePlaylistsDisplay();
+  };
+
+  const handleDeckSelectionFromDialog = (deck, action) => {
+    const { callback, files } = deckSelectionDialog;
+    if (callback) {
+      callback(deck, action);
+    } else if (files && deck) {
+      handleLoadToDeck(files, deck, action);
+    }
+    setDeckSelectionDialog({ isOpen: false, files: [], callback: null });
   };
 
   const HeaderOpenPressed = () => {
@@ -451,6 +533,48 @@ function App() {
         onImport={handleFolderImportConfirm}
         folderName={folderImportDialog.folderName}
         hasNestedPlaylists={folderImportDialog.hasNestedPlaylists}
+      />
+      
+      <EditPlaylistModal
+        isOpen={editPlaylistModal.isOpen}
+        onClose={() => setEditPlaylistModal({ isOpen: false, playlist: null })}
+        onSave={handleEditPlaylistSave}
+        playlist={editPlaylistModal.playlist}
+        allAvailableFiles={allFiles}
+      />
+      
+      <DuplicateHandlingModal
+        isOpen={duplicateModal.isOpen}
+        onClose={() => setDuplicateModal({ ...duplicateModal, isOpen: false })}
+        onChoice={(choice) => {
+          if (duplicateModal.callback) {
+            duplicateModal.callback(choice);
+          }
+          setDuplicateModal({ ...duplicateModal, isOpen: false });
+        }}
+        duplicateCount={duplicateModal.count}
+        playlistName={duplicateModal.playlistName}
+      />
+      
+      <PlaylistPicker
+        isOpen={playlistPicker.isOpen}
+        onClose={() => setPlaylistPicker({ isOpen: false, callback: null })}
+        onSelect={(playlist) => {
+          if (playlistPicker.callback) {
+            playlistPicker.callback(playlist);
+          }
+          setPlaylistPicker({ isOpen: false, callback: null });
+        }}
+        playlists={playlists}
+      />
+      
+      <DeckSelectionDialog
+        isOpen={deckSelectionDialog.isOpen}
+        onClose={() => setDeckSelectionDialog({ isOpen: false, files: [], callback: null })}
+        onSelectDeck={handleDeckSelectionFromDialog}
+        currentDeckA={deckATracks.length > 0}
+        currentDeckB={deckBTracks.length > 0}
+        importType="files"
       />
       
       <EnhancedSidebar
