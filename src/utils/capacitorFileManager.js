@@ -318,12 +318,17 @@ class CapacitorFileManager {
         // Move to a folder
         newPath = `${this.cuewaveDir}/${targetLocation}/${playlistName}`;
         
-        // Ensure target folder exists
-        await Filesystem.mkdir({
-          path: `${this.cuewaveDir}/${targetLocation}`,
-          directory: Directory.Documents,
-          recursive: true
-        });
+        // Ensure target folder exists (ignore error if it already exists)
+        try {
+          await Filesystem.mkdir({
+            path: `${this.cuewaveDir}/${targetLocation}`,
+            directory: Directory.Documents,
+            recursive: true
+          });
+        } catch (mkdirError) {
+          // Folder might already exist, which is fine
+          console.log('Target folder already exists or mkdir failed:', mkdirError.message);
+        }
       }
       
       console.log('Moving from:', oldPath, 'to:', newPath);
