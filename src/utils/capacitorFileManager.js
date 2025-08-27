@@ -273,6 +273,23 @@ class CapacitorFileManager {
     }
   }
 
+  async deleteFolder(folderName) {
+    const path = `${this.cuewaveDir}/${folderName}`;
+    
+    try {
+      await Filesystem.rmdir({
+        path: path,
+        directory: Directory.Documents,
+        recursive: true
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      return false;
+    }
+  }
+
   // Fallback methods for web
   readFromLocalStorage() {
     try {
