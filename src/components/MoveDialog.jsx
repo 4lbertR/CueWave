@@ -88,7 +88,7 @@ function MoveDialog({
             {/* Root level option */}
             <div 
               className={`move-folder-row root-level ${selectedFolder === 'root' ? 'selected' : ''} ${currentLocation === 'root' ? 'current-location' : ''}`}
-              onClick={() => !currentLocation === 'root' && setSelectedFolder('root')}
+              onClick={() => currentLocation !== 'root' && setSelectedFolder('root')}
             >
               <span className="folder-icon">🏠</span>
               <span className="folder-name">Library (Root)</span>

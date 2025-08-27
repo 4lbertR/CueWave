@@ -432,9 +432,16 @@ function App() {
 
   const handleMoveItem = async (item, targetFolderId) => {
     try {
+      console.log('Moving playlist:', item.name, 'to:', targetFolderId);
       // Move playlist to new location
-      await capacitorFileManager.movePlaylist(item.name, targetFolderId);
-      await updatePlaylistsDisplay();
+      const success = await capacitorFileManager.movePlaylist(item.name, targetFolderId);
+      if (success) {
+        await updatePlaylistsDisplay();
+        console.log('Move successful');
+      } else {
+        console.error('Move failed - no error thrown but returned false');
+        alert('Failed to move playlist');
+      }
     } catch (error) {
       console.error('Error moving item:', error);
       alert('Error moving item: ' + error.message);

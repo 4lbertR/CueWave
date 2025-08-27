@@ -300,8 +300,11 @@ class CapacitorFileManager {
   }
 
   async movePlaylist(playlistName, targetLocation) {
+    console.log('movePlaylist called with:', { playlistName, targetLocation, isCapacitor: this.isCapacitor });
+    
     if (!this.isCapacitor) {
       // For web, just update metadata
+      console.log('Using localStorage move');
       return this.movePlaylistInLocalStorage(playlistName, targetLocation);
     }
 
@@ -323,6 +326,8 @@ class CapacitorFileManager {
         });
       }
       
+      console.log('Moving from:', oldPath, 'to:', newPath);
+      
       if (oldPath !== newPath) {
         // Copy to new location
         await Filesystem.copy({
@@ -337,18 +342,27 @@ class CapacitorFileManager {
           directory: Directory.Documents,
           recursive: true
         });
+      } else {
+        console.log('Source and destination are the same, no move needed');
       }
       
       return true;
     } catch (error) {
-      console.error('Error moving playlist:', error);
+      console.error('Error moving playlist in Capacitor:', error);
       return false;
     }
   }
 
   movePlaylistInLocalStorage(playlistName, targetLocation) {
     try {
+      console.log('movePlaylistInLocalStorage:', { playlistName, targetLocation });
       const library = this.readFromLocalStorage();
+      
+      // Ensure library structure
+      if (!library.playlists) library.playlists = [];
+      if (!library.folders) library.folders = [];
+      
+      console.log('Current library structure:', library);
       
       // Find the playlist to move
       let playlistToMove = null;
@@ -387,9 +401,13 @@ class CapacitorFileManager {
         return false;
       }
       
+      console.log('Found playlist to move:', playlistToMove);
+      console.log('Moving from:', currentFolderId, 'to:', targetLocation);
+      
       // Add to new location
       if (targetLocation === 'root') {
         library.playlists.push(playlistToMove);
+        console.log('Added to root level');
       } else {
         // Find target folder and add playlist
         const findFolder = (folders) => {
@@ -397,6 +415,7 @@ class CapacitorFileManager {
             if (folder.id === targetLocation || folder.name === targetLocation) {
               if (!folder.playlists) folder.playlists = [];
               folder.playlists.push(playlistToMove);
+              console.log('Added playlist to existing folder:', folder.name);
               return true;
             }
             if (folder.folders && findFolder(folder.folders)) {
@@ -406,8 +425,12 @@ class CapacitorFileManager {
           return false;
         };
         
-        if (!findFolder(library.folders || [])) {
+        const foundFolder = findFolder(library.folders || []);
+        console.log('Found target folder:', foundFolder);
+        
+        if (!foundFolder) {
           // If folder not found, create it
+          console.log('Target folder not found, creating new folder:', targetLocation);
           if (!library.folders) library.folders = [];
           library.folders.push({
             id: targetLocation,
@@ -419,6 +442,8 @@ class CapacitorFileManager {
       }
       
       localStorage.setItem('cuewave_library', JSON.stringify(library));
+      console.log('Updated library saved to localStorage');
+      console.log('New library structure:', library);
       return true;
     } catch (error) {
       console.error('Error moving playlist in localStorage:', error);
