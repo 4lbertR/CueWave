@@ -1,0 +1,218 @@
+.move-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 500px;
+  max-height: 70vh;
+  background: #2a2a2a;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 2001;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+
+.move-header {
+  padding: 1.5rem;
+  border-bottom: 2px solid #444;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.move-header h2 {
+  margin: 0;
+  color: white;
+  font-size: 1.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80%;
+}
+
+.move-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.move-instruction {
+  color: #ddd;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.folder-tree {
+  flex: 1;
+  overflow-y: auto;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.move-folder-item {
+  margin: 0;
+}
+
+.move-folder-row {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  min-height: 50px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  margin-bottom: 2px;
+  position: relative;
+}
+
+.move-folder-row:hover:not(.current-location) {
+  background-color: #333;
+}
+
+.move-folder-row.selected {
+  background-color: #3a5a8a;
+  border: 2px solid #4a9eff;
+}
+
+.move-folder-row.current-location {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #2a2a2a;
+}
+
+.move-folder-row.root-level {
+  padding-left: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid #333;
+  margin-bottom: 0.5rem;
+}
+
+.expand-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 0.9rem;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.expand-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.folder-select-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.folder-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.folder-name {
+  color: white;
+  font-size: 1rem;
+  flex: 1;
+}
+
+.current-badge {
+  background: #555;
+  color: #aaa;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+
+.subfolders {
+  margin-left: 0;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
+
+.move-footer {
+  padding: 1.5rem;
+  border-top: 2px solid #444;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.cancel-btn,
+.move-btn {
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn {
+  background: #555;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: #666;
+}
+
+.move-btn {
+  background: #4a9eff;
+  color: white;
+}
+
+.move-btn:hover:not(:disabled) {
+  background: #3a8eef;
+}
+
+.move-btn:disabled {
+  background: #444;
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* Scrollbar */
+.folder-tree::-webkit-scrollbar {
+  width: 8px;
+}
+
+.folder-tree::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.folder-tree::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.folder-tree::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}

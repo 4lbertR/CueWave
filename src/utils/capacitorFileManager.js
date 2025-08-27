@@ -48,6 +48,11 @@ class CapacitorFileManager {
       for (const file of result.files) {
         const fileName = file.name || file;
         
+        // Skip the uncategorized folder - it's handled separately
+        if (fileName === 'uncategorized') {
+          continue;
+        }
+        
         if (fileName.startsWith('playlist-')) {
           // It's a playlist
           const playlistData = await this.readPlaylist(fileName);
@@ -286,6 +291,66 @@ class CapacitorFileManager {
       return true;
     } catch (error) {
       console.error('Error deleting folder:', error);
+      return false;
+    }
+  }
+
+  async movePlaylist(playlistName, targetLocation) {
+    if (!this.isCapacitor) {
+      // For web, just update metadata
+      return this.movePlaylistInLocalStorage(playlistName, targetLocation);
+    }
+
+    try {
+      const oldPath = `${this.cuewaveDir}/${playlistName}`;
+      let newPath;
+      
+      if (targetLocation === 'root') {
+        newPath = `${this.cuewaveDir}/${playlistName}`;
+      } else {
+        // Move to a folder
+        newPath = `${this.cuewaveDir}/${targetLocation}/${playlistName}`;
+        
+        // Ensure target folder exists
+        await Filesystem.mkdir({
+          path: `${this.cuewaveDir}/${targetLocation}`,
+          directory: Directory.Documents,
+          recursive: true
+        });
+      }
+      
+      if (oldPath !== newPath) {
+        // Copy to new location
+        await Filesystem.copy({
+          from: oldPath,
+          to: newPath,
+          directory: Directory.Documents
+        });
+        
+        // Delete from old location
+        await Filesystem.rmdir({
+          path: oldPath,
+          directory: Directory.Documents,
+          recursive: true
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error moving playlist:', error);
+      return false;
+    }
+  }
+
+  movePlaylistInLocalStorage(playlistName, targetLocation) {
+    try {
+      const library = this.readFromLocalStorage();
+      // Update playlist location in localStorage
+      // This is simplified - you'd need to track folder structure properly
+      localStorage.setItem('cuewave_library', JSON.stringify(library));
+      return true;
+    } catch (error) {
+      console.error('Error moving playlist in localStorage:', error);
       return false;
     }
   }

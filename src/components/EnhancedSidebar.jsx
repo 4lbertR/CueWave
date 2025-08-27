@@ -528,13 +528,26 @@ function EnhancedSidebar({
                 Edit Contents
               </button>
               <button 
-                className="context-menu-item cancel"
+                className="context-menu-item"
                 onClick={(e) => {
                   e.stopPropagation();
+                  onSelectPlaylist(contextMenu.playlist, 'move');
                   setContextMenu(null);
                 }}
               >
-                Cancel
+                Move
+              </button>
+              <button 
+                className="context-menu-item delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Delete playlist "${contextMenu.playlist.name}"?`)) {
+                    onDeleteItem(contextMenu.playlist, 'playlist');
+                  }
+                  setContextMenu(null);
+                }}
+              >
+                Delete
               </button>
             </div>
           </>

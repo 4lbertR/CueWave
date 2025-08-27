@@ -6,6 +6,7 @@ import EditPlaylistModal from './components/EditPlaylistModal'
 import DuplicateHandlingModal from './components/DuplicateHandlingModal'
 import PlaylistPicker from './components/PlaylistPicker'
 import DeckSelectionDialog from './components/DeckSelectionDialog'
+import MoveDialog from './components/MoveDialog'
 import playlistManager from './utils/playlistManager'
 import iosFileHandler from './utils/iosFileHandler'
 import capacitorFileManager from './utils/capacitorFileManager'
@@ -65,6 +66,7 @@ function App() {
   const [duplicateModal, setDuplicateModal] = useState({ isOpen: false, count: 0, playlistName: '', callback: null });
   const [playlistPicker, setPlaylistPicker] = useState({ isOpen: false, callback: null });
   const [deckSelectionDialog, setDeckSelectionDialog] = useState({ isOpen: false, files: [], callback: null });
+  const [moveDialog, setMoveDialog] = useState({ isOpen: false, item: null, currentLocation: null });
 
   // Load stored files and library on mount
   useEffect(() => {
@@ -327,6 +329,14 @@ function App() {
           }
         }
       });
+    } else if (action === 'move') {
+      // Open move dialog
+      const currentLocation = findPlaylistLocation(playlist);
+      setMoveDialog({ 
+        isOpen: true, 
+        item: playlist, 
+        currentLocation: currentLocation 
+      });
     } else {
       setSidebarOpen(false);
     }
@@ -407,11 +417,43 @@ function App() {
     await updatePlaylistsDisplay();
   };
 
-  const handleMoveItem = async (item, target, moveType) => {
-    // Handle drag and drop moves
-    console.log('Moving:', item, 'to', target, 'type:', moveType);
-    // Implementation depends on your folder structure
-    await updatePlaylistsDisplay();
+  const handleMoveItem = async (item, targetFolderId) => {
+    try {
+      // Move playlist to new location
+      await capacitorFileManager.movePlaylist(item.name, targetFolderId);
+      await updatePlaylistsDisplay();
+    } catch (error) {
+      console.error('Error moving item:', error);
+      alert('Error moving item: ' + error.message);
+    }
+  };
+
+  const findPlaylistLocation = (playlist) => {
+    // Find which folder contains this playlist
+    for (const folder of folders) {
+      if (folder.playlists?.some(p => p.id === playlist.id)) {
+        return folder.id;
+      }
+      // Check nested folders
+      const checkNested = (f) => {
+        for (const subFolder of f.folders || []) {
+          if (subFolder.playlists?.some(p => p.id === playlist.id)) {
+            return subFolder.id;
+          }
+          const nested = checkNested(subFolder);
+          if (nested) return nested;
+        }
+        return null;
+      };
+      const nested = checkNested(folder);
+      if (nested) return nested;
+    }
+    return 'root'; // Playlist is at root level
+  };
+
+  const handleMoveConfirm = async (item, targetLocation) => {
+    await handleMoveItem(item, targetLocation);
+    setMoveDialog({ isOpen: false, item: null, currentLocation: null });
   };
 
   const handleDeleteItem = async (item, type) => {
@@ -569,6 +611,15 @@ function App() {
         currentDeckA={deckATracks.length > 0}
         currentDeckB={deckBTracks.length > 0}
         importType="files"
+      />
+      
+      <MoveDialog
+        isOpen={moveDialog.isOpen}
+        onClose={() => setMoveDialog({ isOpen: false, item: null, currentLocation: null })}
+        onMove={handleMoveConfirm}
+        item={moveDialog.item}
+        folders={folders}
+        currentLocation={moveDialog.currentLocation}
       />
       
       <EnhancedSidebar

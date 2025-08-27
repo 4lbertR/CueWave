@@ -502,11 +502,12 @@
   background-color: #444;
 }
 
-.context-menu-item.cancel {
-  color: #999;
-  border-top: 1px solid #444;
-  margin-top: 0.5rem;
-  padding-top: 1rem;
+.context-menu-item.delete {
+  color: #ff6666;
+}
+
+.context-menu-item.delete:hover {
+  background-color: #553333;
 }
 
 .context-menu-overlay {
