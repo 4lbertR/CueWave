@@ -1,5 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
+import FolderImportDialog from './components/FolderImportDialog'
+import playlistManager from './utils/playlistManager'
+import iosFileHandler from './utils/iosFileHandler'
 
 const fadeInAPressed = () => {
   console.log("Fade In A Clicked!");
@@ -34,10 +37,6 @@ const CF_A_B_Button = () => {
 const CF_B_A_Button = () => {
   console.log("Crossfade B-A Clicked!");
 };
-const HeaderOpenPressed = () => {
-  console.log("Open file / playlist Clicked!");
-};
-
 const HeaderSettingsPressed = () => {
   console.log("Settings Clicked!");
 };
@@ -45,6 +44,29 @@ const HeaderSettingsPressed = () => {
 function App() {
   const [fadeDuration, setFadeDuration] = useState(1);
   const [isCompactMode, setIsCompactMode] = useState(false);
+  const [folderImportDialog, setFolderImportDialog] = useState({
+    isOpen: false,
+    folderName: '',
+    hasNestedPlaylists: false,
+    folderHandle: null,
+    folderStructure: null
+  });
+  const [playlists, setPlaylists] = useState([]);
+
+  // Load stored files on mount (for iOS persistence)
+  useEffect(() => {
+    const loadStoredFiles = async () => {
+      if (iosFileHandler.isIOS || iosFileHandler.isIPad) {
+        try {
+          const storedFiles = await iosFileHandler.getAllStoredFiles();
+          console.log('Loaded stored files:', storedFiles);
+        } catch (error) {
+          console.error('Error loading stored files:', error);
+        }
+      }
+    };
+    loadStoredFiles();
+  }, []);
   
   // Mixer volume states
   const [masterVolume, setMasterVolume] = useState(0.8);
@@ -80,9 +102,177 @@ function App() {
   const [selectedTrackA, setSelectedTrackA] = useState(null);
   const [selectedTrackB, setSelectedTrackB] = useState(null);
 
+  const showImportChoiceDialog = () => {
+    return new Promise((resolve) => {
+      const dialog = document.createElement('div');
+      dialog.className = 'import-choice-dialog';
+      dialog.innerHTML = `
+        <div class="dialog-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+          <div class="dialog-content" style="background: #2a2a2a; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+            <h2 style="color: white; margin: 0 0 1rem 0;">Import Options</h2>
+            <p style="color: #ddd; margin-bottom: 1.5rem;">What would you like to import?</p>
+            <div style="display: flex; gap: 1rem;">
+              <button id="import-folder" style="padding: 1rem 2rem; background: #4a9eff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                Import Folder
+              </button>
+              <button id="import-files" style="padding: 1rem 2rem; background: #4a9eff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                Import Files
+              </button>
+              <button id="import-cancel" style="padding: 1rem 2rem; background: #444; color: #ddd; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(dialog);
+      
+      document.getElementById('import-folder').onclick = () => {
+        document.body.removeChild(dialog);
+        resolve('folder');
+      };
+      
+      document.getElementById('import-files').onclick = () => {
+        document.body.removeChild(dialog);
+        resolve('files');
+      };
+      
+      document.getElementById('import-cancel').onclick = () => {
+        document.body.removeChild(dialog);
+        resolve(null);
+      };
+    });
+  };
+
+  const handleFolderImport = async (dirHandle) => {
+    try {
+      const importData = await playlistManager.importFolderWithDialog(dirHandle);
+      setFolderImportDialog({
+        isOpen: true,
+        folderName: importData.folderName,
+        hasNestedPlaylists: importData.hasNestedPlaylists,
+        folderHandle: importData.folderHandle,
+        folderStructure: importData.folderStructure
+      });
+    } catch (error) {
+      console.error('Error preparing folder import:', error);
+      alert('Error reading folder: ' + error.message);
+    }
+  };
+
+  const handleFolderImportIOS = async (folderStructure) => {
+    try {
+      // Check if folder has playlists
+      const hasPlaylists = folderStructure.playlists.length > 0 || 
+        folderStructure.subfolders?.some(f => f.playlists.length > 0);
+      
+      setFolderImportDialog({
+        isOpen: true,
+        folderName: folderStructure.name || 'Selected Folder',
+        hasNestedPlaylists: hasPlaylists,
+        folderHandle: null,
+        folderStructure: folderStructure
+      });
+    } catch (error) {
+      console.error('Error preparing folder import:', error);
+      alert('Error reading folder: ' + error.message);
+    }
+  };
+
+  const handleFolderImportConfirm = async (importMode) => {
+    try {
+      const { folderHandle, folderStructure } = folderImportDialog;
+      
+      let playlist;
+      if (folderHandle) {
+        // Desktop mode with File System Access API
+        playlist = await playlistManager.importFolder(folderHandle, importMode);
+      } else {
+        // iOS mode with folderStructure
+        playlist = await playlistManager.importFolderFromStructure(folderStructure, importMode);
+      }
+      
+      console.log('Folder imported as playlist:', playlist);
+      updatePlaylistsDisplay();
+      
+      // Store files in IndexedDB for iOS
+      if (iosFileHandler.isIOS || iosFileHandler.isIPad) {
+        for (const track of playlist.tracks) {
+          if (track.file) {
+            await iosFileHandler.storeFileReference(track.file);
+          }
+        }
+      }
+      
+      // Add the new playlist tracks to deck A for now
+      const newTracks = playlist.tracks.map((track, index) => ({
+        id: Date.now() + index,
+        name: track.name,
+        duration: track.duration,
+        path: track.path
+      }));
+      setDeckATracks(prevTracks => [...prevTracks, ...newTracks]);
+    } catch (error) {
+      console.error('Error importing folder:', error);
+      alert('Error importing folder: ' + error.message);
+    }
+  };
+
+  const updatePlaylistsDisplay = () => {
+    const allPlaylists = playlistManager.getAllPlaylists();
+    setPlaylists(allPlaylists);
+    console.log('Updated playlists:', allPlaylists);
+  };
+
+  const HeaderOpenPressed = async () => {
+    console.log("Open file / playlist Clicked!");
+    
+    try {
+      // Show option dialog for file or folder selection
+      const choice = await showImportChoiceDialog();
+      
+      if (choice === 'folder') {
+        // Use iOS-compatible folder import
+        const folderStructure = await iosFileHandler.importFiles('folder');
+        handleFolderImportIOS(folderStructure);
+      } else if (choice === 'files') {
+        // Use iOS-compatible file import
+        const files = await iosFileHandler.importFiles('files');
+        
+        if (files.length > 0) {
+          // Store files in IndexedDB for iOS persistence
+          const storedFiles = [];
+          for (const file of files) {
+            const stored = await iosFileHandler.storeFileReference(file);
+            storedFiles.push(stored);
+          }
+          
+          const playlist = await playlistManager.importAudioFiles(files);
+          console.log('Files imported as playlist:', playlist);
+          updatePlaylistsDisplay();
+        }
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError' && error.message !== 'Selection cancelled') {
+        console.error('Error opening files:', error);
+        alert('Error importing files: ' + error.message);
+      }
+    }
+  };
+
   return (
-    <div className={isCompactMode ? 'compact-mode' : ''}>
-      <div className="cuewave-app">
+    <>
+      <FolderImportDialog
+        isOpen={folderImportDialog.isOpen}
+        onClose={() => setFolderImportDialog({ ...folderImportDialog, isOpen: false })}
+        onImport={handleFolderImportConfirm}
+        folderName={folderImportDialog.folderName}
+        hasNestedPlaylists={folderImportDialog.hasNestedPlaylists}
+      />
+      
+      <div className={isCompactMode ? 'compact-mode' : ''}>
+        <div className="cuewave-app">
     
         <button onClick={() => setIsCompactMode(!isCompactMode)} className='MixerArrow'>
           <img 
@@ -283,6 +473,7 @@ function App() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

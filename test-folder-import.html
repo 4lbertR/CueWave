@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Folder Import</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #3a8eef;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Folder Import Test</h1>
+    <button id="testFolder">Test Folder Import</button>
+    <button id="testFiles">Test File Import</button>
+    <div id="output"></div>
+
+    <script type="module">
+        const output = document.getElementById('output');
+        
+        const AUDIO_EXTENSIONS = ['.mp3', '.m4a', '.aac', '.wav', '.aiff', '.flac'];
+        
+        const isAudioFile = (filename) => {
+            const ext = filename.toLowerCase();
+            return AUDIO_EXTENSIONS.some(audioExt => ext.endsWith(audioExt));
+        };
+
+        async function scanFolder(dirHandle) {
+            const result = {
+                name: dirHandle.name,
+                audioFiles: [],
+                folders: [],
+                playlists: []
+            };
+
+            try {
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file') {
+                        const file = await entry.getFile();
+                        if (isAudioFile(file.name)) {
+                            result.audioFiles.push({
+                                name: file.name,
+                                size: file.size,
+                                type: file.type
+                            });
+                        } else if (file.name.endsWith('.cuewave')) {
+                            result.playlists.push(file.name);
+                        }
+                    } else if (entry.kind === 'directory') {
+                        const subFolder = await scanFolder(entry);
+                        result.folders.push(subFolder);
+                    }
+                }
+            } catch (err) {
+                console.error('Error scanning:', err);
+            }
+
+            return result;
+        }
+
+        document.getElementById('testFolder').onclick = async () => {
+            try {
+                const dirHandle = await window.showDirectoryPicker();
+                output.textContent = 'Scanning folder: ' + dirHandle.name + '...\n\n';
+                
+                const result = await scanFolder(dirHandle);
+                
+                output.textContent += 'Folder structure:\n';
+                output.textContent += JSON.stringify(result, null, 2);
+                
+                // Count total audio files
+                let totalAudio = result.audioFiles.length;
+                const countInSubfolders = (folder) => {
+                    folder.folders.forEach(sub => {
+                        totalAudio += sub.audioFiles.length;
+                        countInSubfolders(sub);
+                    });
+                };
+                countInSubfolders(result);
+                
+                output.textContent += '\n\nTotal audio files found: ' + totalAudio;
+                output.textContent += '\nPlaylists found: ' + result.playlists.length;
+                
+                if (result.playlists.length > 0) {
+                    output.textContent += '\n\nThis folder contains playlists. Import options:';
+                    output.textContent += '\n1. Include all audio files (including from playlists)';
+                    output.textContent += '\n2. Exclude files already in playlists';
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    output.textContent = 'Error: ' + err.message;
+                }
+            }
+        };
+
+        document.getElementById('testFiles').onclick = async () => {
+            try {
+                const fileHandles = await window.showOpenFilePicker({
+                    multiple: true,
+                    types: [{
+                        description: 'Audio Files',
+                        accept: {
+                            'audio/*': ['.mp3', '.m4a', '.aac', '.wav', '.aiff', '.flac']
+                        }
+                    }]
+                });
+                
+                output.textContent = 'Selected files:\n\n';
+                for (const handle of fileHandles) {
+                    const file = await handle.getFile();
+                    output.textContent += `${file.name} (${file.type}, ${(file.size/1024/1024).toFixed(2)} MB)\n`;
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    output.textContent = 'Error: ' + err.message;
+                }
+            }
+        };
+    </script>
+</body>
+</html>

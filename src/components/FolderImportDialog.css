@@ -1,0 +1,128 @@
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.dialog-content {
+  background-color: #2a2a2a;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dialog-content h2 {
+  margin: 0 0 1rem 0;
+  color: #ffffff;
+  font-size: 1.5rem;
+}
+
+.folder-name {
+  color: #999;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  font-family: monospace;
+}
+
+.dialog-message {
+  color: #ddd;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.import-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: flex-start;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 2px solid #444;
+  transition: all 0.2s;
+}
+
+.radio-option:hover {
+  background-color: #333;
+  border-color: #666;
+}
+
+.radio-option input[type="radio"] {
+  margin-right: 0.75rem;
+  margin-top: 0.2rem;
+  cursor: pointer;
+}
+
+.radio-option span {
+  color: #ddd;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.radio-option input[type="radio"]:checked + span {
+  color: #fff;
+  font-weight: 500;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.dialog-buttons button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.cancel-button {
+  background-color: #444;
+  color: #ddd;
+}
+
+.cancel-button:hover {
+  background-color: #555;
+  color: #fff;
+}
+
+.import-button {
+  background-color: #4a9eff;
+  color: white;
+}
+
+.import-button:hover {
+  background-color: #3a8eef;
+  transform: translateY(-1px);
+}

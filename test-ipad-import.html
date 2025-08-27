@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>iPad Import Test - Cuewave</title>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 768px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .info {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 20px;
+            font-size: 18px;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            touch-action: manipulation;
+        }
+        
+        button:active {
+            background: #3a8eef;
+            transform: scale(0.98);
+        }
+        
+        #output {
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 200px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 14px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .platform-info {
+            color: #888;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        @supports (-webkit-touch-callout: none) {
+            /* iOS specific styles */
+            button {
+                padding: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 iPad Import Test</h1>
+        
+        <div class="info">
+            <strong>Platform Detection:</strong>
+            <div id="platformInfo"></div>
+        </div>
+        
+        <div class="buttons">
+            <button id="testFolder">Import Folder (webkitdirectory)</button>
+            <button id="testFiles">Import Audio Files</button>
+            <button id="testNative">Test Native Bridge</button>
+            <button id="clearStorage">Clear Storage</button>
+        </div>
+        
+        <div id="output">Ready for testing...</div>
+        
+        <!-- Hidden file inputs -->
+        <input type="file" id="folderInput" webkitdirectory directory multiple class="file-input">
+        <input type="file" id="filesInput" accept=".mp3,.m4a,.aac,.wav,.aiff,.flac" multiple class="file-input">
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        const platformInfo = document.getElementById('platformInfo');
+        
+        // Platform detection
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isIPad = /iPad/.test(navigator.userAgent) || 
+                       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isInWebView = /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(navigator.userAgent);
+        const hasNativeBridge = window.webkit && window.webkit.messageHandlers;
+        
+        platformInfo.innerHTML = `
+            <div>User Agent: ${navigator.userAgent}</div>
+            <div>Platform: ${navigator.platform}</div>
+            <div>Touch Points: ${navigator.maxTouchPoints}</div>
+            <div>Is iOS: ${isIOS}</div>
+            <div>Is iPad: ${isIPad}</div>
+            <div>Is WebView: ${isInWebView}</div>
+            <div>Has Native Bridge: ${hasNativeBridge}</div>
+        `;
+        
+        // Test folder import with webkitdirectory
+        document.getElementById('testFolder').onclick = () => {
+            const input = document.getElementById('folderInput');
+            
+            input.onchange = (e) => {
+                const files = Array.from(e.target.files);
+                output.textContent = `Selected ${files.length} files from folder\n\n`;
+                
+                // Process folder structure
+                const structure = {};
+                files.forEach(file => {
+                    output.textContent += `${file.webkitRelativePath || file.name} (${(file.size/1024).toFixed(2)} KB)\n`;
+                    
+                    if (file.webkitRelativePath) {
+                        const parts = file.webkitRelativePath.split('/');
+                        const folderName = parts[0];
+                        if (!structure[folderName]) {
+                            structure[folderName] = [];
+                        }
+                        structure[folderName].push(file.name);
+                    }
+                });
+                
+                output.textContent += '\n\nFolder Structure:\n';
+                output.textContent += JSON.stringify(structure, null, 2);
+                
+                // Store in IndexedDB
+                storeFilesInIndexedDB(files);
+            };
+            
+            input.click();
+        };
+        
+        // Test file import
+        document.getElementById('testFiles').onclick = () => {
+            const input = document.getElementById('filesInput');
+            
+            input.onchange = (e) => {
+                const files = Array.from(e.target.files);
+                output.textContent = `Selected ${files.length} audio files\n\n`;
+                
+                files.forEach(file => {
+                    output.textContent += `${file.name} (${file.type}, ${(file.size/1024/1024).toFixed(2)} MB)\n`;
+                });
+                
+                // Store in IndexedDB
+                storeFilesInIndexedDB(files);
+            };
+            
+            input.click();
+        };
+        
+        // Test native bridge
+        document.getElementById('testNative').onclick = () => {
+            output.textContent = 'Testing native bridge...\n\n';
+            
+            if (window.webkit && window.webkit.messageHandlers) {
+                output.textContent += 'Native bridge detected!\n';
+                output.textContent += 'Available handlers:\n';
+                
+                for (let handler in window.webkit.messageHandlers) {
+                    output.textContent += `- ${handler}\n`;
+                }
+                
+                // Try to send a test message
+                if (window.webkit.messageHandlers.cuewaveFileHandler) {
+                    try {
+                        window.webkit.messageHandlers.cuewaveFileHandler.postMessage({
+                            action: 'test',
+                            message: 'Hello from web!'
+                        });
+                        output.textContent += '\nTest message sent to native handler!';
+                    } catch (err) {
+                        output.textContent += '\nError sending message: ' + err.message;
+                    }
+                }
+            } else {
+                output.textContent += 'No native bridge available.\n';
+                output.textContent += 'This is expected in Safari. ';
+                output.textContent += 'The bridge will be available when running in WKWebView.';
+            }
+        };
+        
+        // Clear IndexedDB storage
+        document.getElementById('clearStorage').onclick = async () => {
+            try {
+                const dbs = await indexedDB.databases();
+                for (const db of dbs) {
+                    await indexedDB.deleteDatabase(db.name);
+                }
+                output.textContent = 'Storage cleared successfully!';
+            } catch (err) {
+                output.textContent = 'Error clearing storage: ' + err.message;
+            }
+        };
+        
+        // Store files in IndexedDB
+        async function storeFilesInIndexedDB(files) {
+            try {
+                const db = await openDB();
+                const transaction = db.transaction(['files'], 'readwrite');
+                const store = transaction.objectStore('files');
+                
+                output.textContent += '\n\nStoring in IndexedDB...\n';
+                
+                for (const file of files) {
+                    const reader = new FileReader();
+                    
+                    await new Promise((resolve, reject) => {
+                        reader.onload = async (e) => {
+                            const arrayBuffer = e.target.result;
+                            const blob = new Blob([arrayBuffer], { type: file.type });
+                            
+                            await store.put({
+                                name: file.name,
+                                type: file.type,
+                                size: file.size,
+                                lastModified: file.lastModified,
+                                data: blob
+                            });
+                            
+                            output.textContent += `Stored: ${file.name}\n`;
+                            resolve();
+                        };
+                        
+                        reader.onerror = reject;
+                        reader.readAsArrayBuffer(file);
+                    });
+                }
+                
+                output.textContent += '\nAll files stored successfully!';
+            } catch (err) {
+                output.textContent += '\nError storing files: ' + err.message;
+            }
+        }
+        
+        // Open IndexedDB
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('CuewaveTestDB', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('files')) {
+                        db.createObjectStore('files', { keyPath: 'name' });
+                    }
+                };
+            });
+        }
+        
+        // Register callback for native responses
+        window.CuewaveNativeCallback = (action, data) => {
+            output.textContent += `\n\nNative callback received:\n`;
+            output.textContent += `Action: ${action}\n`;
+            output.textContent += `Data: ${JSON.stringify(data, null, 2)}`;
+        };
+    </script>
+</body>
+</html>
