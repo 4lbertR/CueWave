@@ -12,6 +12,7 @@
   "dependencies": {
     "@capacitor/cli": "^7.4.3",
     "@capacitor/core": "^7.4.3",
+    "@capacitor/filesystem": "^7.1.4",
     "@capacitor/ios": "^7.4.3",
     "docker": "^1.0.0",
     "react": "^19.1.1",

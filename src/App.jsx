@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import FolderImportDialog from './components/FolderImportDialog'
+import DeckSelectionDialog from './components/DeckSelectionDialog'
+import PlaylistSidebar from './components/PlaylistSidebar'
 import playlistManager from './utils/playlistManager'
 import iosFileHandler from './utils/iosFileHandler'
+import capacitorFileManager from './utils/capacitorFileManager'
 
 const fadeInAPressed = () => {
   console.log("Fade In A Clicked!");
@@ -52,20 +55,33 @@ function App() {
     folderStructure: null
   });
   const [playlists, setPlaylists] = useState([]);
+  const [folders, setFolders] = useState([]);
+  const [deckSelectionDialog, setDeckSelectionDialog] = useState({
+    isOpen: false,
+    pendingImport: null,
+    importType: 'files'
+  });
+  const [selectedSidebarDeck, setSelectedSidebarDeck] = useState('A');
 
-  // Load stored files on mount (for iOS persistence)
+  // Load stored files and library on mount
   useEffect(() => {
-    const loadStoredFiles = async () => {
-      if (iosFileHandler.isIOS || iosFileHandler.isIPad) {
-        try {
+    const loadLibrary = async () => {
+      try {
+        // Load from Capacitor filesystem or localStorage
+        const library = await capacitorFileManager.readCuewaveFolder();
+        setPlaylists(library.playlists || []);
+        setFolders(library.folders || []);
+        
+        // Also load IndexedDB files for iOS
+        if (iosFileHandler.isIOS || iosFileHandler.isIPad) {
           const storedFiles = await iosFileHandler.getAllStoredFiles();
           console.log('Loaded stored files:', storedFiles);
-        } catch (error) {
-          console.error('Error loading stored files:', error);
         }
+      } catch (error) {
+        console.error('Error loading library:', error);
       }
     };
-    loadStoredFiles();
+    loadLibrary();
   }, []);
   
   // Mixer volume states
@@ -194,35 +210,108 @@ function App() {
       }
       
       console.log('Folder imported as playlist:', playlist);
-      updatePlaylistsDisplay();
       
-      // Store files in IndexedDB for iOS
-      if (iosFileHandler.isIOS || iosFileHandler.isIPad) {
-        for (const track of playlist.tracks) {
-          if (track.file) {
-            await iosFileHandler.storeFileReference(track.file);
-          }
-        }
-      }
-      
-      // Add the new playlist tracks to deck A for now
-      const newTracks = playlist.tracks.map((track, index) => ({
-        id: Date.now() + index,
-        name: track.name,
-        duration: track.duration,
-        path: track.path
-      }));
-      setDeckATracks(prevTracks => [...prevTracks, ...newTracks]);
+      // Store pending import and show deck selection
+      setDeckSelectionDialog({
+        isOpen: true,
+        pendingImport: { type: 'playlist', data: playlist },
+        importType: 'playlist'
+      });
     } catch (error) {
       console.error('Error importing folder:', error);
       alert('Error importing folder: ' + error.message);
     }
   };
 
-  const updatePlaylistsDisplay = () => {
-    const allPlaylists = playlistManager.getAllPlaylists();
-    setPlaylists(allPlaylists);
-    console.log('Updated playlists:', allPlaylists);
+  const handleDeckSelection = async (deck, action) => {
+    const { pendingImport } = deckSelectionDialog;
+    if (!pendingImport) return;
+
+    try {
+      let playlist;
+      
+      if (pendingImport.type === 'files') {
+        // Create playlist from files
+        playlist = await playlistManager.importAudioFiles(pendingImport.data);
+      } else if (pendingImport.type === 'folder') {
+        // This will trigger the folder import dialog
+        handleFolderImportIOS(pendingImport.data);
+        return;
+      } else if (pendingImport.type === 'playlist') {
+        playlist = pendingImport.data;
+      }
+
+      if (playlist) {
+        // Save to Capacitor filesystem
+        await capacitorFileManager.savePlaylist(playlist, deck);
+        
+        // Store files in IndexedDB for iOS
+        if (iosFileHandler.isIOS || iosFileHandler.isIPad) {
+          for (const track of playlist.tracks) {
+            if (track.file) {
+              await iosFileHandler.storeFileReference(track.file);
+            }
+          }
+        }
+
+        // Load to deck if selected
+        if (deck) {
+          const newTracks = playlist.tracks.map((track, index) => ({
+            id: Date.now() + index,
+            name: track.name,
+            duration: track.duration || '0:00',
+            path: track.path
+          }));
+
+          if (deck === 'A') {
+            if (action === 'append') {
+              setDeckATracks(prevTracks => [...prevTracks, ...newTracks]);
+            } else {
+              setDeckATracks(newTracks);
+            }
+          } else if (deck === 'B') {
+            if (action === 'append') {
+              setDeckBTracks(prevTracks => [...prevTracks, ...newTracks]);
+            } else {
+              setDeckBTracks(newTracks);
+            }
+          }
+        }
+
+        updatePlaylistsDisplay();
+      }
+    } catch (error) {
+      console.error('Error handling deck selection:', error);
+      alert('Error loading playlist: ' + error.message);
+    }
+  };
+
+  const updatePlaylistsDisplay = async () => {
+    // Reload library from storage
+    const library = await capacitorFileManager.readCuewaveFolder();
+    setPlaylists(library.playlists || []);
+    setFolders(library.folders || []);
+    console.log('Updated library:', library);
+  };
+
+  const handleSelectPlaylistFromSidebar = async (playlist, deck) => {
+    try {
+      // Load playlist tracks to selected deck
+      const tracks = playlist.tracks.map((track, index) => ({
+        id: Date.now() + index,
+        name: track.name,
+        duration: track.duration || '0:00',
+        path: track.path
+      }));
+
+      if (deck === 'A') {
+        setDeckATracks(tracks);
+      } else if (deck === 'B') {
+        setDeckBTracks(tracks);
+      }
+    } catch (error) {
+      console.error('Error loading playlist to deck:', error);
+    }
   };
 
   const HeaderOpenPressed = async () => {
@@ -235,22 +324,31 @@ function App() {
       if (choice === 'folder') {
         // Use iOS-compatible folder import
         const folderStructure = await iosFileHandler.importFiles('folder');
-        handleFolderImportIOS(folderStructure);
+        
+        // Store pending import and show deck selection
+        setDeckSelectionDialog({
+          isOpen: true,
+          pendingImport: { type: 'folder', data: folderStructure },
+          importType: 'folder'
+        });
       } else if (choice === 'files') {
         // Use iOS-compatible file import
         const files = await iosFileHandler.importFiles('files');
         
-        if (files.length > 0) {
-          // Store files in IndexedDB for iOS persistence
-          const storedFiles = [];
+        if (files && files.length > 0) {
+          // Add duration to each file
+          const filesWithDuration = [];
           for (const file of files) {
-            const stored = await iosFileHandler.storeFileReference(file);
-            storedFiles.push(stored);
+            const duration = await capacitorFileManager.getAudioDuration(file);
+            filesWithDuration.push({ ...file, duration });
           }
           
-          const playlist = await playlistManager.importAudioFiles(files);
-          console.log('Files imported as playlist:', playlist);
-          updatePlaylistsDisplay();
+          // Store pending import and show deck selection
+          setDeckSelectionDialog({
+            isOpen: true,
+            pendingImport: { type: 'files', data: filesWithDuration },
+            importType: 'files'
+          });
         }
       }
     } catch (error) {
@@ -271,7 +369,24 @@ function App() {
         hasNestedPlaylists={folderImportDialog.hasNestedPlaylists}
       />
       
-      <div className={isCompactMode ? 'compact-mode' : ''}>
+      <DeckSelectionDialog
+        isOpen={deckSelectionDialog.isOpen}
+        onClose={() => setDeckSelectionDialog({ ...deckSelectionDialog, isOpen: false })}
+        onSelectDeck={handleDeckSelection}
+        currentDeckA={deckATracks.length > 0}
+        currentDeckB={deckBTracks.length > 0}
+        importType={deckSelectionDialog.importType}
+      />
+      
+      <PlaylistSidebar
+        playlists={playlists}
+        folders={folders}
+        onSelectPlaylist={handleSelectPlaylistFromSidebar}
+        onRefresh={updatePlaylistsDisplay}
+        selectedDeck={selectedSidebarDeck}
+      />
+      
+      <div className={`main-content ${isCompactMode ? 'compact-mode' : ''}`}>
         <div className="cuewave-app">
     
         <button onClick={() => setIsCompactMode(!isCompactMode)} className='MixerArrow'>

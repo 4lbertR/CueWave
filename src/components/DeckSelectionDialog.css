@@ -1,0 +1,121 @@
+.deck-dialog-content {
+  background-color: #2a2a2a;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: slideIn 0.2s ease-out;
+}
+
+.deck-dialog-content h2 {
+  margin: 0 0 1rem 0;
+  color: #ffffff;
+  font-size: 1.5rem;
+}
+
+.deck-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.deck-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.deck-button {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #333, #2a2a2a);
+  border: 2px solid #444;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1rem;
+}
+
+.deck-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+  border-color: #4a9eff;
+}
+
+.deck-letter {
+  font-size: 2rem;
+  font-weight: bold;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #444;
+}
+
+.deck-a .deck-letter {
+  background: linear-gradient(135deg, #4a9eff, #3a8eef);
+}
+
+.deck-b .deck-letter {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+}
+
+.deck-label {
+  flex: 1;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.current-content {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+.append-button {
+  padding: 0.75rem;
+  background-color: #333;
+  border: 1px solid #555;
+  border-radius: 8px;
+  color: #ddd;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.append-button:hover {
+  background-color: #444;
+  border-color: #666;
+  color: white;
+}
+
+.dialog-footer {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #444;
+}
+
+.skip-button {
+  padding: 0.75rem 1.5rem;
+  background-color: #555;
+  color: #ddd;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.skip-button:hover {
+  background-color: #666;
+  color: white;
+}
