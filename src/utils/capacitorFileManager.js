@@ -329,6 +329,23 @@ class CapacitorFileManager {
       console.log('Moving from:', oldPath, 'to:', newPath);
       
       if (oldPath !== newPath) {
+        // Check if destination already exists and delete it first
+        try {
+          await Filesystem.stat({
+            path: newPath,
+            directory: Directory.Documents
+          });
+          console.log('Destination already exists, removing it first');
+          await Filesystem.rmdir({
+            path: newPath,
+            directory: Directory.Documents,
+            recursive: true
+          });
+        } catch (statError) {
+          // Destination doesn't exist, which is what we want
+          console.log('Destination does not exist, proceeding with move');
+        }
+        
         // Copy to new location
         await Filesystem.copy({
           from: oldPath,
