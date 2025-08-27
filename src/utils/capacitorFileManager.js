@@ -26,6 +26,24 @@ class CapacitorFileManager {
     }
   }
 
+  async getAllPlaylists() {
+    const structure = await this.readCuewaveFolder();
+    const allPlaylists = [...(structure.playlists || [])];
+    
+    // Recursively get playlists from folders
+    const getPlaylistsFromFolder = (folder) => {
+      if (folder.playlists) {
+        allPlaylists.push(...folder.playlists);
+      }
+      if (folder.folders) {
+        folder.folders.forEach(getPlaylistsFromFolder);
+      }
+    };
+    
+    (structure.folders || []).forEach(getPlaylistsFromFolder);
+    return allPlaylists;
+  }
+
   async readCuewaveFolder() {
     if (!this.isCapacitor) {
       // Fallback to localStorage for web
@@ -298,6 +316,116 @@ class CapacitorFileManager {
       return true;
     } catch (error) {
       console.error('Error deleting folder:', error);
+      return false;
+    }
+  }
+
+  async renamePlaylist(oldName, newName) {
+    if (!this.isCapacitor) {
+      // For localStorage version
+      const library = this.readFromLocalStorage();
+      
+      // Find and rename in root playlists
+      const playlist = library.playlists?.find(p => p.name === oldName);
+      if (playlist) {
+        playlist.name = newName;
+        playlist.displayName = newName.replace('playlist-', '');
+        localStorage.setItem('cuewaveLibrary', JSON.stringify(library));
+        return true;
+      }
+      
+      // Find in folders
+      const findAndRename = (folders) => {
+        for (const folder of folders || []) {
+          const playlistIndex = (folder.playlists || []).findIndex(p => p.name === oldName);
+          if (playlistIndex >= 0) {
+            folder.playlists[playlistIndex].name = newName;
+            folder.playlists[playlistIndex].displayName = newName.replace('playlist-', '');
+            localStorage.setItem('cuewaveLibrary', JSON.stringify(library));
+            return true;
+          }
+          if (folder.folders && findAndRename(folder.folders)) {
+            return true;
+          }
+        }
+        return false;
+      };
+      
+      return findAndRename(library.folders);
+    }
+    
+    try {
+      // Ensure names have proper prefix
+      let oldPlaylistName = oldName;
+      if (!oldPlaylistName.startsWith('playlist-')) {
+        oldPlaylistName = `playlist-${oldName}`;
+      }
+      
+      let newPlaylistName = newName;
+      if (!newPlaylistName.startsWith('playlist-')) {
+        newPlaylistName = `playlist-${newName.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+      }
+      
+      const oldPath = `${this.cuewaveDir}/${oldPlaylistName}`;
+      const newPath = `${this.cuewaveDir}/${newPlaylistName}`;
+      
+      // Read the existing metadata
+      const metadataResult = await Filesystem.readFile({
+        path: `${oldPath}/metadata.json`,
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8
+      });
+      
+      const metadata = JSON.parse(metadataResult.data);
+      metadata.name = newName;
+      metadata.modified = Date.now();
+      
+      // Create new directory with new name
+      await Filesystem.mkdir({
+        path: newPath,
+        directory: Directory.Documents,
+        recursive: true
+      });
+      
+      // Write updated metadata to new location
+      await Filesystem.writeFile({
+        path: `${newPath}/metadata.json`,
+        data: JSON.stringify(metadata, null, 2),
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8
+      });
+      
+      // Copy any audio files if they exist
+      try {
+        const oldDirContents = await Filesystem.readdir({
+          path: oldPath,
+          directory: Directory.Documents
+        });
+        
+        for (const file of oldDirContents.files) {
+          const fileName = file.name || file;
+          if (fileName !== 'metadata.json') {
+            await Filesystem.copy({
+              from: `${oldPath}/${fileName}`,
+              to: `${newPath}/${fileName}`,
+              directory: Directory.Documents
+            });
+          }
+        }
+      } catch (copyError) {
+        console.log('No audio files to copy or error copying:', copyError);
+      }
+      
+      // Delete old directory
+      await Filesystem.rmdir({
+        path: oldPath,
+        directory: Directory.Documents,
+        recursive: true
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error renaming playlist:', error);
       return false;
     }
   }

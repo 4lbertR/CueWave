@@ -19,7 +19,7 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 400px;
+  width: 500px;
   background-color: #1a1a1a;
   border-right: 2px solid #333;
   display: flex;
@@ -153,7 +153,7 @@
   color: #ddd;
   user-select: none;
   position: relative;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   -webkit-touch-callout: none;
 }
 
@@ -250,7 +250,7 @@
   padding-left: 3.5rem;
   min-height: 50px;
   color: #aaa;
-  font-size: 1rem;
+  font-size: 1.2rem;
   transition: background-color 0.2s;
 }
 
@@ -398,7 +398,7 @@
   min-height: 60px;
   transition: background-color 0.2s;
   gap: 1rem;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
 }
 
 .file-item:hover {
@@ -407,6 +407,10 @@
 
 .file-item input[type="checkbox"] {
   cursor: pointer;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
 }
 
 .file-name {
@@ -518,6 +522,20 @@
   bottom: 0;
   z-index: 2999;
   background: transparent;
+}
+
+/* Inline Rename Input */
+.rename-input {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  font-size: inherit;
+  font-family: inherit;
+  background-color: #fff;
+  color: #000;
+  border: 2px solid #4a9eff;
+  border-radius: 4px;
+  outline: none;
+  margin-right: 0.5rem;
 }
 
 /* Uncategorized Section */

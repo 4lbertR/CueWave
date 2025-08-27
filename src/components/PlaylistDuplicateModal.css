@@ -1,0 +1,145 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.playlist-duplicate-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  border: 2px solid #444;
+  border-radius: 16px;
+  padding: 2rem;
+  z-index: 1000;
+  min-width: 450px;
+  max-width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.playlist-duplicate-modal h2 {
+  margin: 0 0 1rem 0;
+  color: #fff;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.playlist-duplicate-modal p {
+  color: #ccc;
+  margin: 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+.modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.modal-button {
+  padding: 1.2rem 1.5rem;
+  font-size: 1.2rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.button-hint {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  font-weight: normal;
+}
+
+.modal-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.add-numbered {
+  background: linear-gradient(135deg, #4a9eff, #3a8eef);
+}
+
+.add-numbered:hover {
+  background: linear-gradient(135deg, #5aaeef, #4a9eff);
+}
+
+.rename-section {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.rename-input {
+  flex: 1;
+  padding: 1rem 1.2rem;
+  font-size: 1.1rem;
+  background-color: #333;
+  border: 2px solid #555;
+  border-radius: 8px;
+  color: white;
+  transition: border-color 0.2s;
+}
+
+.rename-input:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.rename-input::placeholder {
+  color: #888;
+}
+
+.modal-button.rename {
+  background: linear-gradient(135deg, #666, #555);
+  flex: 0 0 auto;
+  padding: 1rem 2rem;
+}
+
+.modal-button.rename:hover:not(:disabled) {
+  background: linear-gradient(135deg, #777, #666);
+}
+
+.modal-button.rename:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.modal-button.cancel {
+  background: linear-gradient(135deg, #ff6666, #ff4444);
+}
+
+.modal-button.cancel:hover {
+  background: linear-gradient(135deg, #ff7777, #ff5555);
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import './EnhancedSidebar.css';
+import capacitorFileManager from '../utils/capacitorFileManager';
 
 function EnhancedSidebar({ 
   isOpen,
@@ -26,6 +27,8 @@ function EnhancedSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
   const [touchStart, setTouchStart] = useState(null);
+  const [renamingItem, setRenamingItem] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
   const longPressTimer = useRef(null);
 
   const toggleExpand = (itemId, forceExpand = false) => {
@@ -36,6 +39,22 @@ function EnhancedSidebar({
       newExpanded.delete(itemId);
     }
     setExpandedItems(newExpanded);
+  };
+
+  const handleRenameComplete = async (playlist) => {
+    if (renameValue && renameValue !== formatPlaylistName(playlist.name)) {
+      // Update the playlist name
+      const updatedPlaylist = {
+        ...playlist,
+        name: renameValue
+      };
+      
+      // Save the renamed playlist
+      await capacitorFileManager.renamePlaylist(playlist.name, renameValue);
+      await onRefresh();
+    }
+    setRenamingItem(null);
+    setRenameValue('');
   };
 
   const toggleFileSelection = (fileId) => {
@@ -255,9 +274,29 @@ function EnhancedSidebar({
             {isExpanded ? '▼' : '▶'}
           </span>
           <span className="item-icon">🎵</span>
-          <span className="item-name">
-            {formatPlaylistName(playlist.name)}
-          </span>
+          {renamingItem?.id === playlist.id ? (
+            <input
+              type="text"
+              className="rename-input"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={() => handleRenameComplete(playlist)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleRenameComplete(playlist);
+                } else if (e.key === 'Escape') {
+                  setRenamingItem(null);
+                  setRenameValue('');
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              autoFocus
+            />
+          ) : (
+            <span className="item-name">
+              {formatPlaylistName(playlist.name)}
+            </span>
+          )}
           <span className="item-count">{playlist.tracks?.length || 0}</span>
         </div>
         {renderPlaylistContents(playlist)}
@@ -364,7 +403,6 @@ function EnhancedSidebar({
               />
               <span className="file-name">{file.name}</span>
               <span className="file-duration">{formatDuration(file.duration)}</span>
-              <span className="file-location">{file.location || 'Library'}</span>
             </div>
           ))}
           {filteredFiles.length === 0 && (
@@ -537,6 +575,17 @@ function EnhancedSidebar({
                 }}
               >
                 Move
+              </button>
+              <button 
+                className="context-menu-item"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRenameValue(formatPlaylistName(contextMenu.playlist.name));
+                  setRenamingItem(contextMenu.playlist);
+                  setContextMenu(null);
+                }}
+              >
+                Rename
               </button>
               <button 
                 className="context-menu-item delete"

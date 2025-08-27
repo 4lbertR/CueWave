@@ -323,7 +323,7 @@ button:focus-visible {
   border-bottom: 1px solid #eee;
   cursor: pointer;
   transition: background-color 0.2s;
-  font-size: 2vw;
+  font-size: 2.5vw;
 }
 
 .track-item:hover {
@@ -345,7 +345,7 @@ button:focus-visible {
 
 .track-duration {
   color: #666;
-  font-size: 2vw;
+  font-size: 2.5vw;
   min-width: 4vw;
 }
 

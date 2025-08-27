@@ -4,6 +4,7 @@ import FolderImportDialog from './components/FolderImportDialog'
 import EnhancedSidebar from './components/EnhancedSidebar'
 import EditPlaylistModal from './components/EditPlaylistModal'
 import DuplicateHandlingModal from './components/DuplicateHandlingModal'
+import PlaylistDuplicateModal from './components/PlaylistDuplicateModal'
 import PlaylistPicker from './components/PlaylistPicker'
 import DeckSelectionDialog from './components/DeckSelectionDialog'
 import MoveDialog from './components/MoveDialog'
@@ -64,6 +65,7 @@ function App() {
   const [allFiles, setAllFiles] = useState([]);
   const [editPlaylistModal, setEditPlaylistModal] = useState({ isOpen: false, playlist: null });
   const [duplicateModal, setDuplicateModal] = useState({ isOpen: false, count: 0, playlistName: '', callback: null });
+  const [playlistDuplicateModal, setPlaylistDuplicateModal] = useState({ isOpen: false, existingName: '', onChoice: null, onClose: null });
   const [playlistPicker, setPlaylistPicker] = useState({ isOpen: false, callback: null });
   const [deckSelectionDialog, setDeckSelectionDialog] = useState({ isOpen: false, files: [], callback: null });
   const [moveDialog, setMoveDialog] = useState({ isOpen: false, item: null, currentLocation: null });
@@ -364,6 +366,61 @@ function App() {
   };
 
   const handleCreatePlaylist = async (files, playlistName) => {
+    // Check if playlist with same name exists
+    const existingPlaylists = await capacitorFileManager.getAllPlaylists();
+    const normalizedName = playlistName.toLowerCase().trim();
+    const duplicates = existingPlaylists.filter(p => 
+      p.name.replace('playlist-', '').toLowerCase().trim() === normalizedName ||
+      p.displayName?.toLowerCase().trim() === normalizedName
+    );
+    
+    if (duplicates.length > 0) {
+      // Show duplicate modal
+      return new Promise((resolve) => {
+        setPlaylistDuplicateModal({
+          isOpen: true,
+          existingName: playlistName,
+          onChoice: async (choice, newName) => {
+            if (choice === 'numbered') {
+              // Find the next available number
+              let num = 2;
+              let numberedName = `${playlistName} (${num})`;
+              while (existingPlaylists.some(p => 
+                p.name.replace('playlist-', '').toLowerCase() === numberedName.toLowerCase() ||
+                p.displayName?.toLowerCase() === numberedName.toLowerCase()
+              )) {
+                num++;
+                numberedName = `${playlistName} (${num})`;
+              }
+              const playlist = {
+                id: Date.now(),
+                name: numberedName,
+                tracks: files,
+                created: Date.now()
+              };
+              await capacitorFileManager.savePlaylist(playlist);
+              await updatePlaylistsDisplay();
+            } else if (choice === 'rename' && newName) {
+              const playlist = {
+                id: Date.now(),
+                name: newName,
+                tracks: files,
+                created: Date.now()
+              };
+              await capacitorFileManager.savePlaylist(playlist);
+              await updatePlaylistsDisplay();
+            }
+            setPlaylistDuplicateModal({ isOpen: false });
+            resolve();
+          },
+          onClose: () => {
+            setPlaylistDuplicateModal({ isOpen: false });
+            resolve();
+          }
+        });
+      });
+    }
+    
     const playlist = {
       id: Date.now(),
       name: playlistName,
@@ -625,6 +682,13 @@ function App() {
         }}
         duplicateCount={duplicateModal.count}
         playlistName={duplicateModal.playlistName}
+      />
+      
+      <PlaylistDuplicateModal
+        isOpen={playlistDuplicateModal.isOpen}
+        onClose={playlistDuplicateModal.onClose || (() => setPlaylistDuplicateModal({ isOpen: false }))}
+        existingName={playlistDuplicateModal.existingName}
+        onChoice={playlistDuplicateModal.onChoice || (() => {})}
       />
       
       <PlaylistPicker
