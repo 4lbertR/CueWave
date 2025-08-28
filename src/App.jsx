@@ -1275,12 +1275,12 @@ function App() {
         </div>
 
         <div className="mixer-fader">
-          <label className="fader-label">Master</label>
+          <label className="fader-label">M</label>
           <div className="fader-container">
             <input
               type="range"
               min="0"
-              max="1"
+              max="1"s
               step="0.01"
               value={masterVolume}
               onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
