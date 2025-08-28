@@ -417,11 +417,17 @@ function EnhancedSidebar({
         
         <div className="files-list">
           {filteredFiles.map(file => (
-            <div key={file.id} className="file-item">
+            <div 
+              key={file.id} 
+              className="file-item"
+              onClick={() => toggleFileSelection(file.id)}
+              style={{ cursor: 'pointer' }}
+            >
               <input
                 type="checkbox"
                 checked={selectedFiles.has(file.id)}
                 onChange={() => toggleFileSelection(file.id)}
+                onClick={(e) => e.stopPropagation()}
               />
               <span className="file-name">{file.name}</span>
               <span className="file-duration">{formatDuration(file.duration)}</span>

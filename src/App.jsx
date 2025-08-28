@@ -5,6 +5,7 @@ import EnhancedSidebar from './components/EnhancedSidebar'
 import EditPlaylistModal from './components/EditPlaylistModal'
 import DuplicateHandlingModal from './components/DuplicateHandlingModal'
 import PlaylistDuplicateModal from './components/PlaylistDuplicateModal'
+import FileDuplicateModal from './components/FileDuplicateModal'
 import PlaylistPicker from './components/PlaylistPicker'
 import DeckSelectionDialog from './components/DeckSelectionDialog'
 import MoveDialog from './components/MoveDialog'
@@ -69,6 +70,7 @@ function App() {
   const [playlistPicker, setPlaylistPicker] = useState({ isOpen: false, callback: null });
   const [deckSelectionDialog, setDeckSelectionDialog] = useState({ isOpen: false, files: [], callback: null });
   const [moveDialog, setMoveDialog] = useState({ isOpen: false, item: null, currentLocation: null });
+  const [fileDuplicateModal, setFileDuplicateModal] = useState({ isOpen: false, duplicates: [], onChoice: null, importType: 'files' });
 
   // Load stored files and library on mount
   useEffect(() => {
@@ -567,6 +569,29 @@ function App() {
     setSidebarOpen(true);
   };
 
+  const generateUniqueFileName = (baseName, existingNames) => {
+    // Check if name already exists
+    if (!existingNames.has(baseName)) {
+      return baseName;
+    }
+    
+    // Extract base name and extension
+    const lastDotIndex = baseName.lastIndexOf('.');
+    const nameWithoutExt = lastDotIndex > 0 ? baseName.substring(0, lastDotIndex) : baseName;
+    const extension = lastDotIndex > 0 ? baseName.substring(lastDotIndex) : '';
+    
+    // Try with incrementing numbers
+    let counter = 1;
+    let newName = `${nameWithoutExt} (${counter})${extension}`;
+    
+    while (existingNames.has(newName)) {
+      counter++;
+      newName = `${nameWithoutExt} (${counter})${extension}`;
+    }
+    
+    return newName;
+  };
+
   const handleImportFromSidebar = async () => {
     console.log("Import from sidebar clicked!");
     
@@ -613,31 +638,64 @@ function App() {
           });
           
           if (audioFiles.length > 0) {
-            console.log(`Importing ${audioFiles.length} audio files...`);
-            let successCount = 0;
+            // Check for duplicates in all files
+            const existingFileNames = new Set(allFiles.map(f => f.name));
+            const duplicates = [];
+            const newFiles = [];
             
-            // Add duration to each file and save as uncategorized
             for (const file of audioFiles) {
-              try {
-                const duration = await capacitorFileManager.getAudioDuration(file);
-                // Save each file directly as uncategorized (no playlist)
-                const saved = await capacitorFileManager.saveUncategorizedFile({
-                  id: Date.now() + Math.random(),
-                  name: file.name,
-                  file: file,
-                  duration: duration,
-                  size: file.size,
-                  type: file.type || 'audio/mpeg',
-                  location: 'uncategorized'
-                });
-                if (saved) successCount++;
-              } catch (err) {
-                console.error(`Failed to import ${file.name}:`, err);
+              if (existingFileNames.has(file.name)) {
+                // Generate suggested name with auto-increment
+                const suggestedName = generateUniqueFileName(file.name, existingFileNames);
+                duplicates.push({ file, suggestedName });
+              } else {
+                newFiles.push(file);
               }
             }
             
-            await updatePlaylistsDisplay();
-            console.log(`Successfully imported ${successCount} of ${audioFiles.length} files`);
+            // If duplicates found, show modal
+            if (duplicates.length > 0) {
+              setFileDuplicateModal({
+                isOpen: true,
+                duplicates: duplicates,
+                importType: 'allfiles',
+                onChoice: async (action, renamedFiles) => {
+                  setFileDuplicateModal({ isOpen: false, duplicates: [], onChoice: null });
+                  
+                  if (action === 'cancel') {
+                    return;
+                  }
+                  
+                  let filesToImport = [...newFiles]; // Always import new files
+                  
+                  if (action === 'continue') {
+                    // Import duplicates with auto-generated names
+                    for (const dup of duplicates) {
+                      const newFile = new File([dup.file], dup.suggestedName, { type: dup.file.type });
+                      filesToImport.push(newFile);
+                    }
+                  } else if (action === 'rename') {
+                    // Import duplicates with user-specified names
+                    for (const dup of duplicates) {
+                      const newName = renamedFiles[dup.file.name];
+                      if (newName && newName !== dup.file.name) {
+                        const newFile = new File([dup.file], newName, { type: dup.file.type });
+                        filesToImport.push(newFile);
+                      }
+                    }
+                  } else if (action === 'skip') {
+                    // Only import new files, skip duplicates
+                    // filesToImport already contains only new files
+                  }
+                  
+                  // Import the files
+                  await importAudioFiles(filesToImport);
+                }
+              });
+            } else {
+              // No duplicates, import directly
+              await importAudioFiles(audioFiles);
+            }
           } else {
             alert('No audio files selected. Please select audio files (MP3, M4A, WAV, etc.)');
           }
@@ -651,6 +709,34 @@ function App() {
         alert('Error importing files: ' + error.message);
       }
     }
+  };
+
+  const importAudioFiles = async (audioFiles) => {
+    console.log(`Importing ${audioFiles.length} audio files...`);
+    let successCount = 0;
+    
+    // Add duration to each file and save as uncategorized
+    for (const file of audioFiles) {
+      try {
+        const duration = await capacitorFileManager.getAudioDuration(file);
+        // Save each file directly as uncategorized (no playlist)
+        const saved = await capacitorFileManager.saveUncategorizedFile({
+          id: Date.now() + Math.random(),
+          name: file.name,
+          file: file,
+          duration: duration,
+          size: file.size,
+          type: file.type || 'audio/mpeg',
+          location: 'uncategorized'
+        });
+        if (saved) successCount++;
+      } catch (err) {
+        console.error(`Failed to import ${file.name}:`, err);
+      }
+    }
+    
+    await updatePlaylistsDisplay();
+    console.log(`Successfully imported ${successCount} of ${audioFiles.length} files`);
   };
 
   return (
@@ -719,6 +805,14 @@ function App() {
         item={moveDialog.item}
         folders={folders}
         currentLocation={moveDialog.currentLocation}
+      />
+      
+      <FileDuplicateModal
+        isOpen={fileDuplicateModal.isOpen}
+        onClose={() => setFileDuplicateModal({ isOpen: false, duplicates: [], onChoice: null })}
+        duplicates={fileDuplicateModal.duplicates}
+        onChoice={fileDuplicateModal.onChoice}
+        importType={fileDuplicateModal.importType}
       />
       
       <EnhancedSidebar
