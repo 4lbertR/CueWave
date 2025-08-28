@@ -387,9 +387,8 @@ button:focus-visible {
   background: white;
   border-left: 2px solid #333;
   display: flex;
-  justify-content: center;
+  justify-content: space-evenly;
   align-items: center;
-  gap: 2vw;
   padding: 4vw 2vw;
   transition: transform 0.3s ease-in-out;
   z-index: 50;
@@ -407,7 +406,6 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  height: 70vh;
   gap: 1vw;
 }
 
@@ -419,20 +417,19 @@ button:focus-visible {
 }
 
 .fader-container {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
   width: 3vw;
-  height: 50vh;
+  height: 40vh;
   background: #333;
   border-radius: 3px;
 }
 
 /* VERTICAL SLIDER - USING NATIVE HTML RANGE */
 .vertical-fader {
-  width: 50vh;
+  width: 40vh;
   height: 3vw;
   background: transparent;
   outline: none;
@@ -441,11 +438,12 @@ button:focus-visible {
   transform-origin: center center;
   -webkit-appearance: none;
   appearance: none;
+  position: absolute;
 }
 
 /* Chrome/Safari/Edge - Webkit browsers */
 .vertical-fader::-webkit-slider-track {
-  width: 50vh;
+  width: 100%;
   height: 3vw;
   background: transparent;
   border: none;
@@ -477,7 +475,7 @@ button:focus-visible {
 
 /* Firefox support */
 .vertical-fader::-moz-range-track {
-  width: 50vh;
+  width: 100%;
   height: 3vw;
   background: transparent;
   border: none;
