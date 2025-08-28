@@ -1099,7 +1099,7 @@ function App() {
     
         <button onClick={() => setIsCompactMode(!isCompactMode)} className='MixerArrow'>
           <img 
-            src='src/assets/open-mixer-arrow.svg' 
+            src='/assets/open-mixer-arrow.svg' 
             alt="Toggle mixer"
             style={{ transform: isCompactMode ? 'rotate(180deg)' : 'rotate(0deg)' }}
           />
@@ -1120,7 +1120,7 @@ function App() {
           </button>
 
           <button onClick={playAPressed} className="playstopbutton play-a-button">
-            <img src="src/assets/play.svg" alt="" />
+            <img src="/assets/play.svg" alt="" />
           </button>
 
           <button onClick={fadeOutAPressed} className="fadebutton fade-out-a-button">
@@ -1138,7 +1138,7 @@ function App() {
           </button>
 
           <button onClick={playBPressed} className="playstopbutton play-b-button">
-            <img src="src/assets/play.svg" alt="" />
+            <img src="/assets/play.svg" alt="" />
            </button>
 
           <button onClick={fadeOutBPressed} className="fadebutton fade-out-b-button">
