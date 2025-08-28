@@ -222,20 +222,122 @@ function App() {
     try {
       const { folderHandle, folderStructure } = folderImportDialog;
       
-      let playlist;
-      if (folderHandle) {
-        // Desktop mode with File System Access API
-        playlist = await playlistManager.importFolder(folderHandle, importMode);
-      } else {
-        // iOS mode with folderStructure
-        playlist = await playlistManager.importFolderFromStructure(folderStructure, importMode);
+      // Collect files based on import mode
+      let audioFiles = [];
+      const collectFiles = (structure) => {
+        if (structure.audioFiles) {
+          audioFiles = audioFiles.concat(structure.audioFiles);
+        }
+        
+        // Include playlist files if importMode is 'all'
+        if (importMode === 'all' && structure.playlists) {
+          structure.playlists.forEach(playlist => {
+            if (playlist.tracks) {
+              playlist.tracks.forEach(track => {
+                if (track.file) {
+                  audioFiles.push({
+                    name: track.name || track.file.name,
+                    file: track.file
+                  });
+                }
+              });
+            }
+          });
+        }
+        
+        if (structure.subfolders) {
+          structure.subfolders.forEach(subfolder => collectFiles(subfolder));
+        }
+      };
+      
+      collectFiles(folderStructure);
+      
+      // Remove duplicates from collected files
+      const uniqueFiles = new Map();
+      audioFiles.forEach(fileData => {
+        const file = fileData.file || fileData;
+        if (!uniqueFiles.has(file.name)) {
+          uniqueFiles.set(file.name, file);
+        }
+      });
+      audioFiles = Array.from(uniqueFiles.values());
+      
+      // Check for duplicates in existing files
+      const existingFileNames = new Set(allFiles.map(f => f.name));
+      const duplicates = [];
+      const newFiles = [];
+      
+      for (const file of audioFiles) {
+        if (existingFileNames.has(file.name)) {
+          const suggestedName = generateUniqueFileName(file.name, existingFileNames);
+          duplicates.push({ file, suggestedName });
+        } else {
+          newFiles.push(file);
+        }
       }
       
-      console.log('Folder imported as playlist:', playlist);
+      // Process files (with or without duplicates)
+      const processImport = async (filesToImport) => {
+        // Calculate durations for all files
+        const tracksWithDuration = [];
+        for (const file of filesToImport) {
+          const duration = await capacitorFileManager.getAudioDuration(file);
+          tracksWithDuration.push({
+            id: Date.now() + Math.random(),
+            name: file.name,
+            file: file,
+            duration: duration,
+            size: file.size,
+            type: file.type || 'audio/mpeg'
+          });
+        }
+        
+        const playlist = {
+          id: Date.now(),
+          name: folderStructure.name || 'Imported Folder',
+          tracks: tracksWithDuration,
+          created: Date.now()
+        };
+        
+        await capacitorFileManager.savePlaylist(playlist);
+        await updatePlaylistsDisplay();
+      };
       
-      // Save playlist to storage without deck prompt
-      await capacitorFileManager.savePlaylist(playlist);
-      await updatePlaylistsDisplay();
+      if (duplicates.length > 0) {
+        setFileDuplicateModal({
+          isOpen: true,
+          duplicates: duplicates,
+          importType: 'allfiles',
+          onChoice: async (action, renamedFiles) => {
+            setFileDuplicateModal({ isOpen: false, duplicates: [], onChoice: null });
+            
+            if (action === 'cancel') {
+              return;
+            }
+            
+            let filesToImport = [...newFiles];
+            
+            if (action === 'continue') {
+              for (const dup of duplicates) {
+                const newFile = new File([dup.file], dup.suggestedName, { type: dup.file.type });
+                filesToImport.push(newFile);
+              }
+            } else if (action === 'rename') {
+              for (const dup of duplicates) {
+                const newName = renamedFiles[dup.file.name];
+                if (newName && newName !== dup.file.name) {
+                  const newFile = new File([dup.file], newName, { type: dup.file.type });
+                  filesToImport.push(newFile);
+                }
+              }
+            }
+            
+            await processImport(filesToImport);
+          }
+        });
+      } else {
+        await processImport(newFiles);
+      }
     } catch (error) {
       console.error('Error importing folder:', error);
       alert('Error importing folder: ' + error.message);
@@ -244,9 +346,114 @@ function App() {
 
   const handleDirectFolderImport = async (folderStructure) => {
     try {
-      const playlist = await playlistManager.importFolderFromStructure(folderStructure, 'all');
-      await capacitorFileManager.savePlaylist(playlist);
-      await updatePlaylistsDisplay();
+      // First get the files from folder structure
+      let audioFiles = [];
+      const collectFiles = (structure) => {
+        if (structure.audioFiles) {
+          audioFiles = audioFiles.concat(structure.audioFiles);
+        }
+        if (structure.subfolders) {
+          structure.subfolders.forEach(subfolder => collectFiles(subfolder));
+        }
+      };
+      collectFiles(folderStructure);
+      
+      // Check for duplicates in all files
+      const existingFileNames = new Set(allFiles.map(f => f.name));
+      const duplicates = [];
+      const newFiles = [];
+      
+      for (const fileData of audioFiles) {
+        const file = fileData.file || fileData;
+        if (existingFileNames.has(file.name)) {
+          const suggestedName = generateUniqueFileName(file.name, existingFileNames);
+          duplicates.push({ file, suggestedName });
+        } else {
+          newFiles.push(file);
+        }
+      }
+      
+      // If duplicates found, show modal
+      if (duplicates.length > 0) {
+        setFileDuplicateModal({
+          isOpen: true,
+          duplicates: duplicates,
+          importType: 'allfiles',
+          onChoice: async (action, renamedFiles) => {
+            setFileDuplicateModal({ isOpen: false, duplicates: [], onChoice: null });
+            
+            if (action === 'cancel') {
+              return;
+            }
+            
+            let filesToImport = [...newFiles];
+            
+            if (action === 'continue') {
+              for (const dup of duplicates) {
+                const newFile = new File([dup.file], dup.suggestedName, { type: dup.file.type });
+                filesToImport.push(newFile);
+              }
+            } else if (action === 'rename') {
+              for (const dup of duplicates) {
+                const newName = renamedFiles[dup.file.name];
+                if (newName && newName !== dup.file.name) {
+                  const newFile = new File([dup.file], newName, { type: dup.file.type });
+                  filesToImport.push(newFile);
+                }
+              }
+            }
+            // Skip action: filesToImport already contains only new files
+            
+            // Create playlist from imported files with proper durations
+            const tracksWithDuration = [];
+            for (const file of filesToImport) {
+              const duration = await capacitorFileManager.getAudioDuration(file);
+              tracksWithDuration.push({
+                id: Date.now() + Math.random(),
+                name: file.name,
+                file: file,
+                duration: duration,
+                size: file.size,
+                type: file.type || 'audio/mpeg'
+              });
+            }
+            
+            const playlist = {
+              id: Date.now(),
+              name: folderStructure.name || 'Imported Folder',
+              tracks: tracksWithDuration,
+              created: Date.now()
+            };
+            
+            await capacitorFileManager.savePlaylist(playlist);
+            await updatePlaylistsDisplay();
+          }
+        });
+      } else {
+        // No duplicates, create playlist directly with proper durations
+        const tracksWithDuration = [];
+        for (const file of newFiles) {
+          const duration = await capacitorFileManager.getAudioDuration(file);
+          tracksWithDuration.push({
+            id: Date.now() + Math.random(),
+            name: file.name,
+            file: file,
+            duration: duration,
+            size: file.size,
+            type: file.type || 'audio/mpeg'
+          });
+        }
+        
+        const playlist = {
+          id: Date.now(),
+          name: folderStructure.name || 'Imported Folder',
+          tracks: tracksWithDuration,
+          created: Date.now()
+        };
+        
+        await capacitorFileManager.savePlaylist(playlist);
+        await updatePlaylistsDisplay();
+      }
     } catch (error) {
       console.error('Error importing folder:', error);
       alert('Error importing folder: ' + error.message);

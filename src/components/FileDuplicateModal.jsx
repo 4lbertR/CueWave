@@ -22,19 +22,35 @@ function FileDuplicateModal({
     onClose();
   };
 
+  const getFileNameWithoutExtension = (filename) => {
+    const lastDotIndex = filename.lastIndexOf('.');
+    return lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename;
+  };
+
+  const getFileExtension = (filename) => {
+    const lastDotIndex = filename.lastIndexOf('.');
+    return lastDotIndex > 0 ? filename.substring(lastDotIndex) : '';
+  };
+
   const handleRename = () => {
     if (!showRenameInputs) {
-      // Initialize rename inputs with current names
+      // Initialize rename inputs with current names (without extension)
       const inputs = {};
       duplicates.forEach(dup => {
-        inputs[dup.file.name] = dup.file.name;
+        inputs[dup.file.name] = getFileNameWithoutExtension(dup.file.name);
       });
       setRenameInputs(inputs);
       setShowRenameInputs(true);
       setSelectedAction('rename');
     } else {
-      // Process renames
-      onChoice('rename', renameInputs);
+      // Process renames - add extensions back
+      const renamedWithExtensions = {};
+      duplicates.forEach(dup => {
+        const extension = getFileExtension(dup.file.name);
+        const newNameWithoutExt = renameInputs[dup.file.name];
+        renamedWithExtensions[dup.file.name] = newNameWithoutExt + extension;
+      });
+      onChoice('rename', renamedWithExtensions);
       onClose();
     }
   };
@@ -78,13 +94,16 @@ function FileDuplicateModal({
                 <span className="file-icon">🎵</span>
                 <div className="file-info">
                   {showRenameInputs && selectedAction === 'rename' ? (
-                    <input
-                      type="text"
-                      className="rename-input"
-                      value={renameInputs[dup.file.name] || ''}
-                      onChange={(e) => updateRenameInput(dup.file.name, e.target.value)}
-                      placeholder="Enter new name"
-                    />
+                    <div className="rename-container">
+                      <input
+                        type="text"
+                        className="rename-input"
+                        value={renameInputs[dup.file.name] || ''}
+                        onChange={(e) => updateRenameInput(dup.file.name, e.target.value)}
+                        placeholder="Enter new name"
+                      />
+                      <span className="file-extension">{getFileExtension(dup.file.name)}</span>
+                    </div>
                   ) : (
                     <>
                       <span className="file-name">{dup.file.name}</span>

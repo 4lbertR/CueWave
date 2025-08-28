@@ -108,6 +108,13 @@
   font-style: italic;
 }
 
+.file-duplicate-modal .rename-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
 .file-duplicate-modal .rename-input {
   background: #333;
   border: 1px solid #555;
@@ -115,13 +122,19 @@
   padding: 0.5rem;
   border-radius: 4px;
   font-size: 0.95rem;
-  width: 100%;
+  flex: 1;
 }
 
 .file-duplicate-modal .rename-input:focus {
   outline: none;
   border-color: #4a9eff;
   background: #3a3a3a;
+}
+
+.file-duplicate-modal .file-extension {
+  color: #888;
+  font-size: 0.95rem;
+  min-width: 40px;
 }
 
 .file-duplicate-modal .action-description {
