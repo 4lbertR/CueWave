@@ -8,7 +8,7 @@
 }
 
 .compact-mode .cuewave-app {
-  transform: translateX(-10vw) scaleX(0.8);
+  transform: translateX(-12vw) scaleX(0.76);
 }
 
 button {
@@ -74,6 +74,12 @@ button:focus-visible {
   position: absolute;
   right: 0vw;
   bottom: 0vw;
+  z-index: 100;
+  transition: transform 0.3s ease-in-out;
+}
+
+.compact-mode .MixerArrow {
+  transform: translateX(-20vw);
 }
 
 .MixerArrow img {
@@ -390,7 +396,7 @@ button:focus-visible {
 }
 
 .mixer-hidden {
-  transform: translateX(100%);
+  transform: translateX(calc(100% + 2px));
 }
 
 .mixer-visible {
@@ -418,16 +424,16 @@ button:focus-visible {
   justify-content: center;
   align-items: center;
   position: relative;
-  width: 6vw;
+  width: 3vw;
   height: 50vh;
-  background: #000;
+  background: #333;
   border-radius: 3px;
 }
 
 /* VERTICAL SLIDER - USING NATIVE HTML RANGE */
 .vertical-fader {
   width: 50vh;
-  height: 6vw;
+  height: 3vw;
   background: transparent;
   outline: none;
   cursor: pointer;
@@ -440,15 +446,15 @@ button:focus-visible {
 /* Chrome/Safari/Edge - Webkit browsers */
 .vertical-fader::-webkit-slider-track {
   width: 50vh;
-  height: 6vw;
+  height: 3vw;
   background: transparent;
   border: none;
   border-radius: 0;
 }
 
 .vertical-fader::-webkit-slider-thumb {
-  width: 3vw;
-  height: 8vw;
+  width: 2.5vw;
+  height: 6vw;
   background: linear-gradient(135deg, #aaa 0%, #777 50%, #444 100%);
   border: 2px solid #333;
   border-radius: 4px;
@@ -465,6 +471,36 @@ button:focus-visible {
 }
 
 .vertical-fader::-webkit-slider-thumb:active {
+  background: linear-gradient(135deg, #ccc 0%, #999 50%, #666 100%);
+  transform: scale(0.95);
+}
+
+/* Firefox support */
+.vertical-fader::-moz-range-track {
+  width: 50vh;
+  height: 3vw;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.vertical-fader::-moz-range-thumb {
+  width: 2.5vw;
+  height: 6vw;
+  background: linear-gradient(135deg, #aaa 0%, #777 50%, #444 100%);
+  border: 2px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  transition: all 0.1s ease;
+}
+
+.vertical-fader::-moz-range-thumb:hover {
+  background: linear-gradient(135deg, #bbb 0%, #888 50%, #555 100%);
+  transform: scale(1.1);
+}
+
+.vertical-fader::-moz-range-thumb:active {
   background: linear-gradient(135deg, #ccc 0%, #999 50%, #666 100%);
   transform: scale(0.95);
 }

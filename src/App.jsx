@@ -126,12 +126,12 @@ function App() {
     loadLibrary();
   }, []);
   
-  // Mixer volume states
-  const [masterVolume, setMasterVolume] = useState(0.8);
-  const [deckAVolume, setDeckAVolume] = useState(0.7);
+  // Mixer volume states - all start at 50% (0.5) and unmuted
+  const [masterVolume, setMasterVolume] = useState(0.5);
+  const [deckAVolume, setDeckAVolume] = useState(0.5);
   const [deckBVolume, setDeckBVolume] = useState(0.5);
   const [muteA, setMuteA] = useState(false);
-  const [muteB, setMuteB] = useState(true);
+  const [muteB, setMuteB] = useState(false);
   const [muteMaster, setMuteMaster] = useState(false);
 
   const [deckATracks, setDeckATracks] = useState([]);
