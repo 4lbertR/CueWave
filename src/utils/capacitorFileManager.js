@@ -14,12 +14,23 @@ class CapacitorFileManager {
     if (!this.isCapacitor) return false;
     
     try {
-      await Filesystem.mkdir({
-        path: this.cuewaveDir,
-        directory: Directory.Documents,
-        recursive: true
-      });
-      return true;
+      // First check if directory exists
+      try {
+        await Filesystem.stat({
+          path: this.cuewaveDir,
+          directory: Directory.Documents
+        });
+        // Directory exists
+        return true;
+      } catch (statError) {
+        // Directory doesn't exist, create it
+        await Filesystem.mkdir({
+          path: this.cuewaveDir,
+          directory: Directory.Documents,
+          recursive: true
+        });
+        return true;
+      }
     } catch (error) {
       // Directory might already exist, which is fine
       if (error.code === 'OS-PLUG-FILE-0010') {
@@ -641,12 +652,20 @@ class CapacitorFileManager {
     try {
       await this.ensureCuewaveDirectory();
       
-      // Create uncategorized directory
-      await Filesystem.mkdir({
-        path: path,
-        directory: Directory.Documents,
-        recursive: true
-      });
+      // Create uncategorized directory if it doesn't exist
+      try {
+        await Filesystem.mkdir({
+          path: path,
+          directory: Directory.Documents,
+          recursive: true
+        });
+      } catch (mkdirError) {
+        // Directory already exists, which is fine
+        if (mkdirError.code !== 'OS-PLUG-FILE-0010') {
+          console.error('Error creating uncategorized directory:', mkdirError);
+          throw mkdirError;
+        }
+      }
 
       // Save file metadata
       const metadataPath = `${path}/metadata.json`;

@@ -157,3 +157,5 @@ The entire app is built in react and later nested into ipados
 
 
 This app has already been nested into ipados and is being automatically deployed to ipad every commit usingg xcode and capacitor.
+
+Always commit changes to repo and push trhem. No need to ask me.
