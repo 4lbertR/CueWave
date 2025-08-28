@@ -278,29 +278,47 @@ function App() {
       
       // Process files (with or without duplicates)
       const processImport = async (filesToImport) => {
-        // Calculate durations for all files
-        const tracksWithDuration = [];
-        for (const file of filesToImport) {
-          const duration = await capacitorFileManager.getAudioDuration(file);
-          tracksWithDuration.push({
-            id: Date.now() + Math.random(),
-            name: file.name,
-            file: file,
-            duration: duration,
-            size: file.size,
-            type: file.type || 'audio/mpeg'
-          });
-        }
+        // First create playlist with placeholder durations for immediate display
+        const playlistId = Date.now();
+        const initialTracks = filesToImport.map((file, index) => ({
+          id: playlistId + index + Math.random(),
+          name: file.name,
+          file: file,
+          duration: 'Loading...', // Placeholder duration
+          size: file.size,
+          type: file.type || 'audio/mpeg'
+        }));
         
         const playlist = {
-          id: Date.now(),
+          id: playlistId,
           name: folderStructure.name || 'Imported Folder',
-          tracks: tracksWithDuration,
+          tracks: initialTracks,
           created: Date.now()
         };
         
+        // Save and display immediately with placeholder durations
         await capacitorFileManager.savePlaylist(playlist);
         await updatePlaylistsDisplay();
+        
+        // Now calculate durations asynchronously and update
+        const tracksWithDuration = [];
+        for (let i = 0; i < filesToImport.length; i++) {
+          const file = filesToImport[i];
+          const duration = await capacitorFileManager.getAudioDuration(file);
+          tracksWithDuration.push({
+            ...initialTracks[i],
+            duration: duration
+          });
+          
+          // Update playlist with calculated durations periodically (every 5 files)
+          if ((i + 1) % 5 === 0 || i === filesToImport.length - 1) {
+            playlist.tracks = tracksWithDuration.concat(
+              initialTracks.slice(tracksWithDuration.length)
+            );
+            await capacitorFileManager.savePlaylist(playlist);
+            await updatePlaylistsDisplay();
+          }
+        }
       };
       
       if (duplicates.length > 0) {
@@ -404,55 +422,91 @@ function App() {
             }
             // Skip action: filesToImport already contains only new files
             
-            // Create playlist from imported files with proper durations
-            const tracksWithDuration = [];
-            for (const file of filesToImport) {
-              const duration = await capacitorFileManager.getAudioDuration(file);
-              tracksWithDuration.push({
-                id: Date.now() + Math.random(),
-                name: file.name,
-                file: file,
-                duration: duration,
-                size: file.size,
-                type: file.type || 'audio/mpeg'
-              });
-            }
+            // Create playlist from imported files - show immediately then update durations
+            const playlistId = Date.now();
+            const initialTracks = filesToImport.map((file, index) => ({
+              id: playlistId + index + Math.random(),
+              name: file.name,
+              file: file,
+              duration: 'Loading...',
+              size: file.size,
+              type: file.type || 'audio/mpeg'
+            }));
             
             const playlist = {
-              id: Date.now(),
+              id: playlistId,
               name: folderStructure.name || 'Imported Folder',
-              tracks: tracksWithDuration,
+              tracks: initialTracks,
               created: Date.now()
             };
             
+            // Save and display immediately
             await capacitorFileManager.savePlaylist(playlist);
             await updatePlaylistsDisplay();
+            
+            // Calculate durations asynchronously
+            const tracksWithDuration = [];
+            for (let i = 0; i < filesToImport.length; i++) {
+              const file = filesToImport[i];
+              const duration = await capacitorFileManager.getAudioDuration(file);
+              tracksWithDuration.push({
+                ...initialTracks[i],
+                duration: duration
+              });
+              
+              // Update periodically
+              if ((i + 1) % 5 === 0 || i === filesToImport.length - 1) {
+                playlist.tracks = tracksWithDuration.concat(
+                  initialTracks.slice(tracksWithDuration.length)
+                );
+                await capacitorFileManager.savePlaylist(playlist);
+                await updatePlaylistsDisplay();
+              }
+            }
           }
         });
       } else {
-        // No duplicates, create playlist directly with proper durations
-        const tracksWithDuration = [];
-        for (const file of newFiles) {
-          const duration = await capacitorFileManager.getAudioDuration(file);
-          tracksWithDuration.push({
-            id: Date.now() + Math.random(),
-            name: file.name,
-            file: file,
-            duration: duration,
-            size: file.size,
-            type: file.type || 'audio/mpeg'
-          });
-        }
+        // No duplicates, create playlist immediately then calculate durations
+        const playlistId = Date.now();
+        const initialTracks = newFiles.map((file, index) => ({
+          id: playlistId + index + Math.random(),
+          name: file.name,
+          file: file,
+          duration: 'Loading...',
+          size: file.size,
+          type: file.type || 'audio/mpeg'
+        }));
         
         const playlist = {
-          id: Date.now(),
+          id: playlistId,
           name: folderStructure.name || 'Imported Folder',
-          tracks: tracksWithDuration,
+          tracks: initialTracks,
           created: Date.now()
         };
         
+        // Save and display immediately
         await capacitorFileManager.savePlaylist(playlist);
         await updatePlaylistsDisplay();
+        
+        // Calculate durations asynchronously
+        const tracksWithDuration = [];
+        for (let i = 0; i < newFiles.length; i++) {
+          const file = newFiles[i];
+          const duration = await capacitorFileManager.getAudioDuration(file);
+          tracksWithDuration.push({
+            ...initialTracks[i],
+            duration: duration
+          });
+          
+          // Update periodically
+          if ((i + 1) % 5 === 0 || i === newFiles.length - 1) {
+            playlist.tracks = tracksWithDuration.concat(
+              initialTracks.slice(tracksWithDuration.length)
+            );
+            await capacitorFileManager.savePlaylist(playlist);
+            await updatePlaylistsDisplay();
+          }
+        }
       }
     } catch (error) {
       console.error('Error importing folder:', error);
