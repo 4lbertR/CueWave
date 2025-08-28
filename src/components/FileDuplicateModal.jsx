@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './FileDuplicateModal.css';
 
 function FileDuplicateModal({ 
@@ -12,6 +12,24 @@ function FileDuplicateModal({
   const [selectedAction, setSelectedAction] = useState('continue');
   const [showRenameInputs, setShowRenameInputs] = useState(false);
 
+  // Reset state when modal opens/closes or duplicates change
+  useEffect(() => {
+    if (isOpen) {
+      // Reset to initial state when modal opens
+      setRenameInputs({});
+      setSelectedAction('continue');
+      setShowRenameInputs(false);
+    }
+  }, [isOpen, duplicates]);
+
+  const resetAndClose = () => {
+    // Clear all state before closing
+    setRenameInputs({});
+    setSelectedAction('continue');
+    setShowRenameInputs(false);
+    onClose();
+  };
+
   const handleContinue = () => {
     // For all files import, auto-increment names
     const renamedFiles = {};
@@ -19,7 +37,7 @@ function FileDuplicateModal({
       renamedFiles[dup.file.name] = dup.suggestedName;
     });
     onChoice('continue', renamedFiles);
-    onClose();
+    resetAndClose();
   };
 
   const getFileNameWithoutExtension = (filename) => {
@@ -51,18 +69,18 @@ function FileDuplicateModal({
         renamedWithExtensions[dup.file.name] = newNameWithoutExt + extension;
       });
       onChoice('rename', renamedWithExtensions);
-      onClose();
+      resetAndClose();
     }
   };
 
   const handleSkip = () => {
     onChoice('skip', null);
-    onClose();
+    resetAndClose();
   };
 
   const handleCancel = () => {
     onChoice('cancel', null);
-    onClose();
+    resetAndClose();
   };
 
   const updateRenameInput = (originalName, newName) => {
