@@ -745,8 +745,29 @@ function App() {
   };
 
   const handleRemoveFromPlaylist = async (track, playlist) => {
+    // Remove track from playlist
     playlist.tracks = playlist.tracks.filter(t => t.id !== track.id);
     await capacitorFileManager.savePlaylist(playlist);
+    
+    // Check if track exists in any other playlist
+    const allPlaylists = await capacitorFileManager.getAllPlaylists();
+    const isInAnotherPlaylist = allPlaylists.some(p => 
+      p.id !== playlist.id && p.tracks?.some(t => t.name === track.name)
+    );
+    
+    // If not in any playlist, add to uncategorized
+    if (!isInAnotherPlaylist && track.file) {
+      await capacitorFileManager.saveUncategorizedFile({
+        id: track.id || Date.now() + Math.random(),
+        name: track.name,
+        file: track.file,
+        duration: track.duration || '0:00',
+        size: track.size || 0,
+        type: track.type || 'audio/mpeg',
+        location: 'uncategorized'
+      });
+    }
+    
     await updatePlaylistsDisplay();
   };
 
@@ -1280,7 +1301,7 @@ function App() {
             <input
               type="range"
               min="0"
-              max="1"s
+              max="1"
               step="0.01"
               value={masterVolume}
               onChange={(e) => setMasterVolume(parseFloat(e.target.value))}

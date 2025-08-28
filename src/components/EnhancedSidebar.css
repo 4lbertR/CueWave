@@ -296,6 +296,22 @@
   color: #ff4444;
 }
 
+.delete-btn-visible {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0.5rem;
+  font-size: 1.3rem;
+  opacity: 1;
+  transition: color 0.2s;
+  margin-left: auto;
+}
+
+.delete-btn-visible:hover {
+  color: #ff4444;
+}
+
 .empty-playlist {
   padding: 1rem 2.5rem;
   color: #666;

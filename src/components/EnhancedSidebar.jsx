@@ -504,17 +504,32 @@ function EnhancedSidebar({
                     {allFiles
                       .filter(f => !f.location || f.location === 'uncategorized')
                       .map(file => (
-                        <div key={file.id} className="file-item uncategorized-file">
+                        <div 
+                          key={file.id} 
+                          className="file-item uncategorized-file"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setContextMenu({
+                              x: rect.left + rect.width / 2,
+                              y: rect.bottom + 5,
+                              file: file,
+                              type: 'uncategorized'
+                            });
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
                           <span className="file-name">{file.name}</span>
                           <span className="file-duration">{formatDuration(file.duration)}</span>
                           <button
-                            className="delete-btn"
+                            className="delete-btn-visible"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (confirm(`Delete file "${file.name}"?`)) {
                                 onDeleteItem(file, 'uncategorized');
                               }
                             }}
+                            title="Delete file"
                           >
                             🗑
                           </button>
@@ -574,61 +589,100 @@ function EnhancedSidebar({
                 transform: 'translateX(-50%)'
               }}
             >
-              <button 
-                className="context-menu-item"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectPlaylist(contextMenu.playlist, 'deck');
-                  setContextMenu(null);
-                }}
-              >
-                Add to Deck
-              </button>
-              <button 
-                className="context-menu-item"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectPlaylist(contextMenu.playlist, 'edit');
-                  setContextMenu(null);
-                }}
-              >
-                Edit Contents
-              </button>
-              <button 
-                className="context-menu-item"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectPlaylist(contextMenu.playlist, 'move');
-                  setContextMenu(null);
-                }}
-              >
-                Move
-              </button>
-              <button 
-                className="context-menu-item"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const displayName = contextMenu.playlist.displayName || 
-                                    formatPlaylistName(contextMenu.playlist.name);
-                  setRenameValue(displayName);
-                  setRenamingItem(contextMenu.playlist);
-                  setContextMenu(null);
-                }}
-              >
-                Rename
-              </button>
-              <button 
-                className="context-menu-item delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm(`Delete playlist "${contextMenu.playlist.name}"?`)) {
-                    onDeleteItem(contextMenu.playlist, 'playlist');
-                  }
-                  setContextMenu(null);
-                }}
-              >
-                Delete
-              </button>
+              {contextMenu.type === 'uncategorized' ? (
+                <>
+                  <button 
+                    className="context-menu-item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onLoadToDeck([contextMenu.file], null, 'append');
+                      setContextMenu(null);
+                    }}
+                  >
+                    Add to Deck
+                  </button>
+                  <button 
+                    className="context-menu-item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddToPlaylist([contextMenu.file], null);
+                      setContextMenu(null);
+                    }}
+                  >
+                    Add to Playlist
+                  </button>
+                  <button 
+                    className="context-menu-item delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete file "${contextMenu.file.name}"?`)) {
+                        onDeleteItem(contextMenu.file, 'uncategorized');
+                      }
+                      setContextMenu(null);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    className="context-menu-item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectPlaylist(contextMenu.playlist, 'deck');
+                      setContextMenu(null);
+                    }}
+                  >
+                    Add to Deck
+                  </button>
+                  <button 
+                    className="context-menu-item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectPlaylist(contextMenu.playlist, 'edit');
+                      setContextMenu(null);
+                    }}
+                  >
+                    Edit Contents
+                  </button>
+                  <button 
+                    className="context-menu-item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectPlaylist(contextMenu.playlist, 'move');
+                      setContextMenu(null);
+                    }}
+                  >
+                    Move
+                  </button>
+                  <button 
+                    className="context-menu-item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const displayName = contextMenu.playlist.displayName || 
+                                        formatPlaylistName(contextMenu.playlist.name);
+                      setRenameValue(displayName);
+                      setRenamingItem(contextMenu.playlist);
+                      setContextMenu(null);
+                    }}
+                  >
+                    Rename
+                  </button>
+                  <button 
+                    className="context-menu-item delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete playlist "${contextMenu.playlist.name}"?`)) {
+                        onDeleteItem(contextMenu.playlist, 'playlist');
+                      }
+                      setContextMenu(null);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}

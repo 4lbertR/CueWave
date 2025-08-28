@@ -21,7 +21,7 @@ function DeckSelectionDialog({
   };
 
   return (
-    <div className="dialog-overlay" onClick={onClose}>
+    <div className="deck-selection-overlay" onClick={onClose}>
       <div className="deck-dialog-content" onClick={(e) => e.stopPropagation()}>
         <h2>Select Target Deck</h2>
         <p className="dialog-message">
@@ -40,14 +40,12 @@ function DeckSelectionDialog({
                 <span className="current-content">(Replace current)</span>
               )}
             </button>
-            {currentDeckA && (
-              <button 
-                className="append-button"
-                onClick={() => handleDeckSelect('A', 'append')}
-              >
-                Append to Deck A
-              </button>
-            )}
+            <button 
+              className="append-button"
+              onClick={() => handleDeckSelect('A', 'append')}
+            >
+              Append to Deck A
+            </button>
           </div>
 
           <div className="deck-option">
@@ -61,14 +59,12 @@ function DeckSelectionDialog({
                 <span className="current-content">(Replace current)</span>
               )}
             </button>
-            {currentDeckB && (
-              <button 
-                className="append-button"
-                onClick={() => handleDeckSelect('B', 'append')}
-              >
-                Append to Deck B
-              </button>
-            )}
+            <button 
+              className="append-button"
+              onClick={() => handleDeckSelect('B', 'append')}
+            >
+              Append to Deck B
+            </button>
           </div>
         </div>
 

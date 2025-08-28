@@ -79,7 +79,7 @@ button:focus-visible {
 }
 
 .compact-mode .MixerArrow {
-  transform: translateX(-20vw);
+  transform: translateX(-10vw);
 }
 
 .MixerArrow img {
