@@ -783,12 +783,48 @@ class CapacitorFileManager {
   }
 
   // LocalStorage fallback for uncategorized
-  saveUncategorizedToLocalStorage(fileData) {
+  async saveUncategorizedToLocalStorage(fileData) {
     try {
+      // Store metadata in localStorage
       const stored = localStorage.getItem('cuewave_uncategorized') || '[]';
       const uncategorized = JSON.parse(stored);
-      uncategorized.push(fileData);
+      
+      // Create metadata without file object for localStorage
+      const metadata = {
+        id: fileData.id,
+        name: fileData.name,
+        duration: fileData.duration,
+        size: fileData.size,
+        type: fileData.type,
+        location: fileData.location
+      };
+      uncategorized.push(metadata);
       localStorage.setItem('cuewave_uncategorized', JSON.stringify(uncategorized));
+      
+      // Store actual file in IndexedDB if we have it
+      if (fileData.file && typeof indexedDB !== 'undefined') {
+        try {
+          const db = await this.openIndexedDB();
+          const transaction = db.transaction(['files'], 'readwrite');
+          const store = transaction.objectStore('files');
+          
+          // Convert file to base64 for storage
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const fileRecord = {
+              name: fileData.name,
+              data: reader.result,
+              type: fileData.type,
+              size: fileData.size
+            };
+            store.put(fileRecord);
+          };
+          reader.readAsDataURL(fileData.file);
+        } catch (dbError) {
+          console.error('Error storing file in IndexedDB:', dbError);
+        }
+      }
+      
       return true;
     } catch (error) {
       console.error('Error saving uncategorized to localStorage:', error);
@@ -851,6 +887,102 @@ class CapacitorFileManager {
       });
       
       audio.src = objectUrl;
+    });
+  }
+
+  async getFileData(track) {
+    try {
+      // First check if track has a file object
+      if (track.file && track.file instanceof File) {
+        return track.file;
+      }
+
+      // Try to load from IndexedDB if available
+      if (typeof indexedDB !== 'undefined') {
+        const db = await this.openIndexedDB();
+        const transaction = db.transaction(['files'], 'readonly');
+        const store = transaction.objectStore('files');
+        const request = store.get(track.name || track.id);
+        
+        return new Promise((resolve, reject) => {
+          request.onsuccess = () => {
+            const fileData = request.result;
+            if (fileData && fileData.data) {
+              // Convert base64 back to blob if needed
+              if (typeof fileData.data === 'string') {
+                const byteCharacters = atob(fileData.data.split(',')[1]);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                  byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: fileData.type || 'audio/mpeg' });
+                resolve(blob);
+              } else {
+                resolve(fileData.data);
+              }
+            } else {
+              resolve(null);
+            }
+          };
+          request.onerror = () => {
+            console.error('Error loading from IndexedDB');
+            resolve(null);
+          };
+        });
+      }
+
+      // Try to load from Capacitor filesystem if available
+      if (this.isCapacitor) {
+        // Try different paths where the file might be stored
+        const paths = [
+          `${this.cuewaveDir}/uncategorized/${track.id}.audio`,
+          `${this.cuewaveDir}/files/${track.name}`,
+          `${this.cuewaveDir}/${track.location}/${track.name}`
+        ];
+
+        for (const path of paths) {
+          try {
+            const result = await Filesystem.readFile({
+              path: path,
+              directory: Directory.Documents
+            });
+            
+            // Convert base64 to blob
+            const byteCharacters = atob(result.data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: track.type || 'audio/mpeg' });
+          } catch (err) {
+            // Try next path
+            continue;
+          }
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting file data:', error);
+      return null;
+    }
+  }
+
+  async openIndexedDB() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('CuewaveFiles', 1);
+      
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('files')) {
+          db.createObjectStore('files', { keyPath: 'name' });
+        }
+      };
+      
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
     });
   }
 }

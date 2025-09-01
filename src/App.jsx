@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import FolderImportDialog from './components/FolderImportDialog'
 import EnhancedSidebar from './components/EnhancedSidebar'
@@ -19,8 +19,11 @@ const fadeInAPressed = () => {
 const fadeOutAPressed = () => {
   console.log("Fade Out A Clicked!");
 };
-const playAPressed = () => {
+const playAPressed = async () => {
   console.log("Play A Clicked!");
+  if (selectedTrackA) {
+    await handlePlayPause('A');
+  }
 }; 
 const fadeNextAPressed = () => {
   console.log("Fade Next A Clicked!"); 
@@ -32,8 +35,11 @@ const fadeInBPressed = () => {
 const fadeOutBPressed = () => {
   console.log("Fade Out B Clicked!");
 };
-const playBPressed = () => {
+const playBPressed = async () => {
   console.log("Play B Clicked!");
+  if (selectedTrackB) {
+    await handlePlayPause('B');
+  }
 };
 const fadeNextBPressed = () => {
   console.log("Fade Next B Clicked!");
@@ -139,6 +145,92 @@ function App() {
 
   const [selectedTrackA, setSelectedTrackA] = useState(null);
   const [selectedTrackB, setSelectedTrackB] = useState(null);
+  
+  // Audio player refs and playing state
+  const audioRefA = useRef(null);
+  const audioRefB = useRef(null);
+  const [isPlayingA, setIsPlayingA] = useState(false);
+  const [isPlayingB, setIsPlayingB] = useState(false);
+  const [currentTrackA, setCurrentTrackA] = useState(null);
+  const [currentTrackB, setCurrentTrackB] = useState(null);
+
+  // Initialize audio elements
+  useEffect(() => {
+    if (!audioRefA.current) {
+      audioRefA.current = new Audio();
+    }
+    if (!audioRefB.current) {
+      audioRefB.current = new Audio();
+    }
+    
+    // Set up volume controls
+    const updateVolumes = () => {
+      if (audioRefA.current) {
+        audioRefA.current.volume = muteA ? 0 : deckAVolume * masterVolume;
+      }
+      if (audioRefB.current) {
+        audioRefB.current.volume = muteB ? 0 : deckBVolume * masterVolume;
+      }
+    };
+    
+    updateVolumes();
+  }, [deckAVolume, deckBVolume, masterVolume, muteA, muteB, muteMaster]);
+
+  // Handle play/pause for decks
+  const handlePlayPause = async (deck) => {
+    const audioRef = deck === 'A' ? audioRefA : audioRefB;
+    const selectedTrack = deck === 'A' ? selectedTrackA : selectedTrackB;
+    const currentTrack = deck === 'A' ? currentTrackA : currentTrackB;
+    const setCurrentTrack = deck === 'A' ? setCurrentTrackA : setCurrentTrackB;
+    const isPlaying = deck === 'A' ? isPlayingA : isPlayingB;
+    const setIsPlaying = deck === 'A' ? setIsPlayingA : setIsPlayingB;
+    
+    if (!audioRef.current || !selectedTrack) return;
+    
+    try {
+      // If it's a new track, load it
+      if (!currentTrack || currentTrack.id !== selectedTrack.id) {
+        // Get the audio URL for the track
+        let audioUrl;
+        if (selectedTrack.file) {
+          // If we have the file object directly
+          audioUrl = URL.createObjectURL(selectedTrack.file);
+        } else if (selectedTrack.url) {
+          // If we have a URL
+          audioUrl = selectedTrack.url;
+        } else {
+          // Try to load from storage
+          const fileData = await capacitorFileManager.getFileData(selectedTrack);
+          if (fileData) {
+            audioUrl = URL.createObjectURL(fileData);
+          } else {
+            console.error('Could not load audio file');
+            return;
+          }
+        }
+        
+        audioRef.current.src = audioUrl;
+        setCurrentTrack(selectedTrack);
+        
+        // Set up event listeners for the new track
+        audioRef.current.onended = () => {
+          setIsPlaying(false);
+        };
+      }
+      
+      // Toggle play/pause
+      if (isPlaying) {
+        await audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        await audioRef.current.play();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Error playing/pausing audio:', error);
+      setIsPlaying(false);
+    }
+  };
 
   const showImportChoiceDialog = () => {
     return new Promise((resolve) => {
@@ -1141,7 +1233,7 @@ function App() {
           </button>
 
           <button onClick={playAPressed} className="playstopbutton play-a-button">
-            <img src="/assets/play.svg" alt="" />
+            <img src={isPlayingA ? "/assets/stop.svg" : "/assets/play.svg"} alt="" />
           </button>
 
           <button onClick={fadeOutAPressed} className="fadebutton fade-out-a-button">
@@ -1159,8 +1251,8 @@ function App() {
           </button>
 
           <button onClick={playBPressed} className="playstopbutton play-b-button">
-            <img src="/assets/play.svg" alt="" />
-           </button>
+            <img src={isPlayingB ? "/assets/stop.svg" : "/assets/play.svg"} alt="" />
+          </button>
 
           <button onClick={fadeOutBPressed} className="fadebutton fade-out-b-button">
             Fade Out 
