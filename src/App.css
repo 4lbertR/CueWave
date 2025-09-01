@@ -155,7 +155,7 @@ button:focus-visible {
   transform: scale(150%);
   text-align: center; 
 } 
-
+ 
 .fade-slider-div label {
   display: block;
   font-size: 1.8vw;
