@@ -223,9 +223,13 @@ function App() {
   fadeOutAPressed = async () => {
     console.log("Fade Out A Starting");
     await fadeVolume('A', 0, fadeDuration);
+    // Small delay to ensure fade completes before stopping
+    await new Promise(resolve => setTimeout(resolve, 50));
     if (isPlayingA) {
       await handlePlayPause('A'); // Stop playing after fade
     }
+    // Small delay before resetting to avoid spike
+    await new Promise(resolve => setTimeout(resolve, 100));
     // Reset fade gain for next time
     if (fadeGainNodeA.current) {
       fadeGainNodeA.current.gain.value = 1.0;
@@ -235,9 +239,13 @@ function App() {
   fadeOutBPressed = async () => {
     console.log("Fade Out B Starting");
     await fadeVolume('B', 0, fadeDuration);
+    // Small delay to ensure fade completes before stopping
+    await new Promise(resolve => setTimeout(resolve, 50));
     if (isPlayingB) {
       await handlePlayPause('B'); // Stop playing after fade
     }
+    // Small delay before resetting to avoid spike
+    await new Promise(resolve => setTimeout(resolve, 100));
     // Reset fade gain for next time
     if (fadeGainNodeB.current) {
       fadeGainNodeB.current.gain.value = 1.0;
@@ -249,25 +257,37 @@ function App() {
     console.log("Fade to Next A Starting");
     const currentIndex = deckATracks.findIndex(track => track.id === selectedTrackA?.id);
     if (currentIndex >= 0 && currentIndex < deckATracks.length - 1) {
-      // Start fading out current track
-      await fadeVolume('A', 0, fadeDuration);
-      
-      // Select and play next track
       const nextTrack = deckATracks[currentIndex + 1];
-      setSelectedTrackA(nextTrack);
       
-      // Reset fade gain and start new track
+      // Start fading out current track
+      const fadeOutPromise = fadeVolume('A', 0, fadeDuration);
+      
+      // Wait a bit into the fade before starting next track (overlap)
+      await new Promise(resolve => setTimeout(resolve, fadeDuration * 500)); // Start halfway through
+      
+      // Stop current track
+      if (isPlayingA) {
+        await handlePlayPause('A');
+      }
+      
+      // Select next track
+      setSelectedTrackA(nextTrack);
+      setCurrentTrackA(null); // Force reload of track
+      
+      // Reset fade gain to 0 for fade in
       if (fadeGainNodeA.current) {
         fadeGainNodeA.current.gain.value = 0;
       }
       
-      // Small delay to ensure track is loaded
-      setTimeout(async () => {
-        if (!isPlayingA) {
-          await handlePlayPause('A');
-        }
-        await fadeVolume('A', 1.0, fadeDuration);
-      }, 100);
+      // Start playing next track
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for track load
+      await handlePlayPause('A');
+      
+      // Fade in the new track
+      await fadeVolume('A', 1.0, fadeDuration);
+      
+      // Ensure fade out completed
+      await fadeOutPromise;
     }
   };
 
@@ -275,25 +295,37 @@ function App() {
     console.log("Fade to Next B Starting");
     const currentIndex = deckBTracks.findIndex(track => track.id === selectedTrackB?.id);
     if (currentIndex >= 0 && currentIndex < deckBTracks.length - 1) {
-      // Start fading out current track
-      await fadeVolume('B', 0, fadeDuration);
-      
-      // Select and play next track
       const nextTrack = deckBTracks[currentIndex + 1];
-      setSelectedTrackB(nextTrack);
       
-      // Reset fade gain and start new track
+      // Start fading out current track
+      const fadeOutPromise = fadeVolume('B', 0, fadeDuration);
+      
+      // Wait a bit into the fade before starting next track (overlap)
+      await new Promise(resolve => setTimeout(resolve, fadeDuration * 500)); // Start halfway through
+      
+      // Stop current track
+      if (isPlayingB) {
+        await handlePlayPause('B');
+      }
+      
+      // Select next track
+      setSelectedTrackB(nextTrack);
+      setCurrentTrackB(null); // Force reload of track
+      
+      // Reset fade gain to 0 for fade in
       if (fadeGainNodeB.current) {
         fadeGainNodeB.current.gain.value = 0;
       }
       
-      // Small delay to ensure track is loaded
-      setTimeout(async () => {
-        if (!isPlayingB) {
-          await handlePlayPause('B');
-        }
-        await fadeVolume('B', 1.0, fadeDuration);
-      }, 100);
+      // Start playing next track
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay for track load
+      await handlePlayPause('B');
+      
+      // Fade in the new track
+      await fadeVolume('B', 1.0, fadeDuration);
+      
+      // Ensure fade out completed
+      await fadeOutPromise;
     }
   };
 
@@ -552,6 +584,11 @@ function App() {
         setIsPlaying(false);
       } else {
         console.log('Playing audio');
+        // Reset fade gain to 1.0 when starting playback normally
+        const fadeGainNode = deck === 'A' ? fadeGainNodeA.current : fadeGainNodeB.current;
+        if (fadeGainNode) {
+          fadeGainNode.gain.value = 1.0;
+        }
         // Resume audio context if needed (for iOS)
         if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
           await audioContextRef.current.resume();
