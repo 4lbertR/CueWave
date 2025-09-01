@@ -205,25 +205,32 @@ function App() {
     try {
       // If it's a new track, load it
       if (!currentTrack || currentTrack.id !== selectedTrack.id) {
+        console.log('Loading new track:', selectedTrack);
         // Get the audio URL for the track
         let audioUrl;
-        if (selectedTrack.file) {
+        if (selectedTrack.file && selectedTrack.file instanceof File) {
           // If we have the file object directly
+          console.log('Using file object directly');
           audioUrl = URL.createObjectURL(selectedTrack.file);
         } else if (selectedTrack.url) {
           // If we have a URL
+          console.log('Using URL:', selectedTrack.url);
           audioUrl = selectedTrack.url;
         } else {
           // Try to load from storage
+          console.log('Loading from storage for track:', selectedTrack.name);
           const fileData = await capacitorFileManager.getFileData(selectedTrack);
           if (fileData) {
+            console.log('File data loaded successfully');
             audioUrl = URL.createObjectURL(fileData);
           } else {
-            console.error('Could not load audio file');
+            console.error('Could not load audio file from storage');
+            alert('Could not load audio file. Please re-import the file.');
             return;
           }
         }
         
+        console.log('Setting audio URL:', audioUrl);
         audioRef.current.src = audioUrl;
         setCurrentTrack(selectedTrack);
         
@@ -231,15 +238,30 @@ function App() {
         audioRef.current.onended = () => {
           setIsPlaying(false);
         };
+        
+        audioRef.current.onerror = (e) => {
+          console.error('Audio error:', e);
+          setIsPlaying(false);
+        };
+      }
+      
+      // Set volume before playing
+      if (deck === 'A') {
+        audioRef.current.volume = muteA ? 0 : deckAVolume * masterVolume;
+      } else {
+        audioRef.current.volume = muteB ? 0 : deckBVolume * masterVolume;
       }
       
       // Toggle play/pause
       if (isPlaying) {
+        console.log('Pausing audio');
         await audioRef.current.pause();
         setIsPlaying(false);
       } else {
+        console.log('Playing audio');
         await audioRef.current.play();
         setIsPlaying(true);
+        console.log('Audio playing successfully');
       }
     } catch (error) {
       console.error('Error playing/pausing audio:', error);
@@ -638,11 +660,17 @@ function App() {
 
     try {
       const tracks = files.map((file, index) => ({
-        id: Date.now() + index,
+        id: file.id || Date.now() + index,
         name: file.name,
         duration: file.duration || '0:00',
-        path: file.path
+        path: file.path,
+        file: file.file || file, // Keep the file object for playback
+        type: file.type,
+        size: file.size,
+        location: file.location
       }));
+      
+      console.log('Loading tracks to deck:', deck, tracks);
 
       if (deck === 'A') {
         if (action === 'append') {
