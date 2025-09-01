@@ -59,6 +59,7 @@ function App() {
   const [playlists, setPlaylists] = useState([]);
   const [folders, setFolders] = useState([]);
   const [allFiles, setAllFiles] = useState([]);
+  const fileObjectsRef = useRef(new Map()); // Store file objects in memory by ID
   const [editPlaylistModal, setEditPlaylistModal] = useState({ isOpen: false, playlist: null });
   const [duplicateModal, setDuplicateModal] = useState({ isOpen: false, count: 0, playlistName: '', callback: null });
   const [playlistDuplicateModal, setPlaylistDuplicateModal] = useState({ isOpen: false, existingName: '', onChoice: null, onClose: null });
@@ -208,7 +209,15 @@ function App() {
         console.log('Loading new track:', selectedTrack);
         // Get the audio URL for the track
         let audioUrl;
-        if (selectedTrack.file && selectedTrack.file instanceof File) {
+        
+        // First check in-memory file objects
+        const memoryFile = fileObjectsRef.current.get(String(selectedTrack.id)) || 
+                          fileObjectsRef.current.get(selectedTrack.name);
+        
+        if (memoryFile && memoryFile instanceof File) {
+          console.log('Using file from memory');
+          audioUrl = URL.createObjectURL(memoryFile);
+        } else if (selectedTrack.file && selectedTrack.file instanceof File) {
           // If we have the file object directly
           console.log('Using file object directly');
           audioUrl = URL.createObjectURL(selectedTrack.file);
@@ -1136,9 +1145,15 @@ function App() {
     for (const file of audioFiles) {
       try {
         const duration = await capacitorFileManager.getAudioDuration(file);
+        const fileId = Date.now() + Math.random();
+        
+        // Store file object in memory for playback
+        fileObjectsRef.current.set(String(fileId), file);
+        fileObjectsRef.current.set(file.name, file); // Also store by name as backup
+        
         // Save each file directly as uncategorized (no playlist)
         const saved = await capacitorFileManager.saveUncategorizedFile({
-          id: Date.now() + Math.random(),
+          id: fileId,
           name: file.name,
           file: file,
           duration: duration,

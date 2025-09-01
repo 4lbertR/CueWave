@@ -803,26 +803,42 @@ class CapacitorFileManager {
       
       // Store actual file in IndexedDB if we have it
       if (fileData.file && typeof indexedDB !== 'undefined') {
-        try {
-          const db = await this.openIndexedDB();
-          const transaction = db.transaction(['files'], 'readwrite');
-          const store = transaction.objectStore('files');
-          
-          // Convert file to base64 for storage
+        await new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onloadend = () => {
-            const fileRecord = {
-              name: fileData.name,
-              data: reader.result,
-              type: fileData.type,
-              size: fileData.size
-            };
-            store.put(fileRecord);
+          reader.onloadend = async () => {
+            try {
+              const db = await this.openIndexedDB();
+              const transaction = db.transaction(['files'], 'readwrite');
+              const store = transaction.objectStore('files');
+              
+              const fileRecord = {
+                name: fileData.name,
+                id: fileData.id,
+                data: reader.result,
+                type: fileData.type,
+                size: fileData.size
+              };
+              
+              const request = store.put(fileRecord);
+              request.onsuccess = () => {
+                console.log('File stored in IndexedDB:', fileData.name);
+                resolve();
+              };
+              request.onerror = () => {
+                console.error('Error storing file in IndexedDB:', request.error);
+                reject(request.error);
+              };
+            } catch (dbError) {
+              console.error('Error with IndexedDB transaction:', dbError);
+              reject(dbError);
+            }
+          };
+          reader.onerror = () => {
+            console.error('Error reading file:', reader.error);
+            reject(reader.error);
           };
           reader.readAsDataURL(fileData.file);
-        } catch (dbError) {
-          console.error('Error storing file in IndexedDB:', dbError);
-        }
+        });
       }
       
       return true;
@@ -892,8 +908,11 @@ class CapacitorFileManager {
 
   async getFileData(track) {
     try {
+      console.log('Getting file data for track:', track);
+      
       // First check if track has a file object
       if (track.file && track.file instanceof File) {
+        console.log('Track has file object directly');
         return track.file;
       }
 
@@ -902,34 +921,38 @@ class CapacitorFileManager {
         const db = await this.openIndexedDB();
         const transaction = db.transaction(['files'], 'readonly');
         const store = transaction.objectStore('files');
-        const request = store.get(track.name || track.id);
         
-        return new Promise((resolve, reject) => {
-          request.onsuccess = () => {
-            const fileData = request.result;
-            if (fileData && fileData.data) {
-              // Convert base64 back to blob if needed
-              if (typeof fileData.data === 'string') {
-                const byteCharacters = atob(fileData.data.split(',')[1]);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                  byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], { type: fileData.type || 'audio/mpeg' });
-                resolve(blob);
-              } else {
-                resolve(fileData.data);
+        // Try to get by name first, then by ID
+        const keys = [track.name, track.id, String(track.id)];
+        
+        for (const key of keys) {
+          if (!key) continue;
+          
+          const result = await new Promise((resolve) => {
+            const request = store.get(key);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => resolve(null);
+          });
+          
+          if (result && result.data) {
+            console.log('Found file in IndexedDB with key:', key);
+            // Convert base64 back to blob if needed
+            if (typeof result.data === 'string') {
+              const byteCharacters = atob(result.data.split(',')[1]);
+              const byteNumbers = new Array(byteCharacters.length);
+              for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
               }
+              const byteArray = new Uint8Array(byteNumbers);
+              const blob = new Blob([byteArray], { type: result.type || track.type || 'audio/mpeg' });
+              return blob;
             } else {
-              resolve(null);
+              return result.data;
             }
-          };
-          request.onerror = () => {
-            console.error('Error loading from IndexedDB');
-            resolve(null);
-          };
-        });
+          }
+        }
+        
+        console.log('File not found in IndexedDB');
       }
 
       // Try to load from Capacitor filesystem if available
