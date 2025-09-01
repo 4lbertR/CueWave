@@ -13,34 +13,15 @@ import playlistManager from './utils/playlistManager'
 import iosFileHandler from './utils/iosFileHandler'
 import capacitorFileManager from './utils/capacitorFileManager'
 
-// These functions will be defined inside the App component
-const fadeInAPressed = () => {
-  console.log("Fade In A Clicked!");
-};
-const fadeOutAPressed = () => {
-  console.log("Fade Out A Clicked!");
-};
-const fadeNextAPressed = () => {
-  console.log("Fade Next A Clicked!"); 
-};
-
-const fadeInBPressed = () => {
-  console.log("Fade In B Clicked!");
-};
-const fadeOutBPressed = () => {
-  console.log("Fade Out B Clicked!");
-};
-const fadeNextBPressed = () => {
-  console.log("Fade Next B Clicked!");
-};
-
-const CF_A_B_Button = () => {
-  console.log("Crossfade A-B Clicked!");
-};
-
-const CF_B_A_Button = () => {
-  console.log("Crossfade B-A Clicked!");
-};
+// Global functions that will be defined inside the App component
+let fadeInAPressed = () => {};
+let fadeOutAPressed = () => {};
+let fadeNextAPressed = () => {};
+let fadeInBPressed = () => {};
+let fadeOutBPressed = () => {};
+let fadeNextBPressed = () => {};
+let CF_A_B_Button = () => {};
+let CF_B_A_Button = () => {};
 const HeaderSettingsPressed = () => {
   console.log("Settings Clicked!");
 };
@@ -145,6 +126,8 @@ function App() {
   const gainNodeB = useRef(null);
   const sourceNodeA = useRef(null);
   const sourceNodeB = useRef(null);
+  const fadeIntervalA = useRef(null);
+  const fadeIntervalB = useRef(null);
   const [isPlayingA, setIsPlayingA] = useState(false);
   const [isPlayingB, setIsPlayingB] = useState(false);
   const [currentTrackA, setCurrentTrackA] = useState(null);
@@ -166,6 +149,169 @@ function App() {
       await handlePlayPause('B');
     } else {
       console.log("No track selected in Deck B");
+    }
+  };
+
+  // Fade functions
+  const fadeVolume = (deck, targetVolume, duration) => {
+    return new Promise((resolve) => {
+      // Cancel any existing fade
+      const fadeInterval = deck === 'A' ? fadeIntervalA : fadeIntervalB;
+      if (fadeInterval.current) {
+        cancelAnimationFrame(fadeInterval.current);
+      }
+      
+      const startTime = Date.now();
+      const setVolume = deck === 'A' ? setDeckAVolume : setDeckBVolume;
+      const startVolume = deck === 'A' ? deckAVolume : deckBVolume;
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / (duration * 1000), 1);
+        
+        // Use easing function for smooth fade
+        const easedProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease-in-out
+        const currentVolume = startVolume + (targetVolume - startVolume) * easedProgress;
+        
+        setVolume(Math.round(currentVolume));
+        
+        if (progress < 1) {
+          fadeInterval.current = requestAnimationFrame(animate);
+        } else {
+          fadeInterval.current = null;
+          resolve();
+        }
+      };
+      
+      animate();
+    });
+  };
+
+  // Fade In functions
+  fadeInAPressed = async () => {
+    console.log("Fade In A Starting");
+    if (!isPlayingA && selectedTrackA) {
+      setDeckAVolume(0); // Start from 0
+      await handlePlayPause('A'); // Start playing
+    }
+    await fadeVolume('A', 60, fadeDuration); // Fade to 100% (position 60)
+  };
+
+  fadeInBPressed = async () => {
+    console.log("Fade In B Starting");
+    if (!isPlayingB && selectedTrackB) {
+      setDeckBVolume(0); // Start from 0
+      await handlePlayPause('B'); // Start playing
+    }
+    await fadeVolume('B', 60, fadeDuration); // Fade to 100% (position 60)
+  };
+
+  // Fade Out functions
+  fadeOutAPressed = async () => {
+    console.log("Fade Out A Starting");
+    await fadeVolume('A', 0, fadeDuration);
+    if (isPlayingA) {
+      await handlePlayPause('A'); // Stop playing after fade
+    }
+  };
+
+  fadeOutBPressed = async () => {
+    console.log("Fade Out B Starting");
+    await fadeVolume('B', 0, fadeDuration);
+    if (isPlayingB) {
+      await handlePlayPause('B'); // Stop playing after fade
+    }
+  };
+
+  // Fade to Next functions
+  fadeNextAPressed = async () => {
+    console.log("Fade to Next A Starting");
+    const currentIndex = deckATracks.findIndex(track => track.id === selectedTrackA?.id);
+    if (currentIndex >= 0 && currentIndex < deckATracks.length - 1) {
+      // Start fading out current track
+      const fadeOutPromise = fadeVolume('A', 0, fadeDuration);
+      
+      // Wait for fade to complete
+      await fadeOutPromise;
+      
+      // Select and play next track
+      const nextTrack = deckATracks[currentIndex + 1];
+      setSelectedTrackA(nextTrack);
+      setDeckAVolume(0);
+      
+      // Small delay to ensure track is loaded
+      setTimeout(async () => {
+        if (!isPlayingA) {
+          await handlePlayPause('A');
+        }
+        await fadeVolume('A', 60, fadeDuration);
+      }, 100);
+    }
+  };
+
+  fadeNextBPressed = async () => {
+    console.log("Fade to Next B Starting");
+    const currentIndex = deckBTracks.findIndex(track => track.id === selectedTrackB?.id);
+    if (currentIndex >= 0 && currentIndex < deckBTracks.length - 1) {
+      // Start fading out current track
+      const fadeOutPromise = fadeVolume('B', 0, fadeDuration);
+      
+      // Wait for fade to complete
+      await fadeOutPromise;
+      
+      // Select and play next track
+      const nextTrack = deckBTracks[currentIndex + 1];
+      setSelectedTrackB(nextTrack);
+      setDeckBVolume(0);
+      
+      // Small delay to ensure track is loaded
+      setTimeout(async () => {
+        if (!isPlayingB) {
+          await handlePlayPause('B');
+        }
+        await fadeVolume('B', 60, fadeDuration);
+      }, 100);
+    }
+  };
+
+  // Crossfade functions
+  CF_A_B_Button = async () => {
+    console.log("Crossfade A-B Starting");
+    // Start B if not playing
+    if (!isPlayingB && selectedTrackB) {
+      setDeckBVolume(0);
+      await handlePlayPause('B');
+    }
+    
+    // Crossfade: A fades out, B fades in
+    await Promise.all([
+      fadeVolume('A', 0, fadeDuration),
+      fadeVolume('B', 60, fadeDuration)
+    ]);
+    
+    // Stop A after fade
+    if (isPlayingA) {
+      await handlePlayPause('A');
+    }
+  };
+
+  CF_B_A_Button = async () => {
+    console.log("Crossfade B-A Starting");
+    // Start A if not playing
+    if (!isPlayingA && selectedTrackA) {
+      setDeckAVolume(0);
+      await handlePlayPause('A');
+    }
+    
+    // Crossfade: B fades out, A fades in
+    await Promise.all([
+      fadeVolume('B', 0, fadeDuration),
+      fadeVolume('A', 60, fadeDuration)
+    ]);
+    
+    // Stop B after fade
+    if (isPlayingB) {
+      await handlePlayPause('B');
     }
   };
 
