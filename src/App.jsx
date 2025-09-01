@@ -140,6 +140,11 @@ function App() {
   // Audio player refs and playing state
   const audioRefA = useRef(null);
   const audioRefB = useRef(null);
+  const audioContextRef = useRef(null);
+  const gainNodeA = useRef(null);
+  const gainNodeB = useRef(null);
+  const sourceNodeA = useRef(null);
+  const sourceNodeB = useRef(null);
   const [isPlayingA, setIsPlayingA] = useState(false);
   const [isPlayingB, setIsPlayingB] = useState(false);
   const [currentTrackA, setCurrentTrackA] = useState(null);
@@ -164,16 +169,44 @@ function App() {
     }
   };
 
-  // Initialize audio elements
+  // Initialize audio elements and Web Audio API
   useEffect(() => {
-    if (!audioRefA.current) {
-      audioRefA.current = new Audio();
-    }
-    if (!audioRefB.current) {
-      audioRefB.current = new Audio();
-    }
+    const initAudio = () => {
+      // Create or get audio context
+      if (!audioContextRef.current) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioContextRef.current = new AudioContext();
+      }
+      
+      // Initialize audio elements
+      if (!audioRefA.current) {
+        audioRefA.current = new Audio();
+        audioRefA.current.crossOrigin = "anonymous";
+        
+        // Create gain node for deck A
+        if (!gainNodeA.current) {
+          gainNodeA.current = audioContextRef.current.createGain();
+          gainNodeA.current.connect(audioContextRef.current.destination);
+        }
+      }
+      
+      if (!audioRefB.current) {
+        audioRefB.current = new Audio();
+        audioRefB.current.crossOrigin = "anonymous";
+        
+        // Create gain node for deck B
+        if (!gainNodeB.current) {
+          gainNodeB.current = audioContextRef.current.createGain();
+          gainNodeB.current.connect(audioContextRef.current.destination);
+        }
+      }
+    };
     
-    // Set up volume controls
+    initAudio();
+  }, []);
+  
+  // Update volumes when sliders change
+  useEffect(() => {
     const updateVolumes = () => {
       // Convert slider position (0-100) to volume multiplier (0-3)
       // 0 = 0%, 50 = 100% (1.0), 100 = 300% (3.0)
@@ -185,13 +218,15 @@ function App() {
       const deckAMultiplier = getVolumeMultiplier(deckAVolume);
       const deckBMultiplier = getVolumeMultiplier(deckBVolume);
       
-      if (audioRefA.current) {
-        const volumeA = muteA ? 0 : Math.min(1, deckAMultiplier * masterMultiplier);
-        audioRefA.current.volume = volumeA;
+      // Update gain nodes for amplification
+      if (gainNodeA.current) {
+        const gainA = muteA || muteMaster ? 0 : deckAMultiplier * masterMultiplier;
+        gainNodeA.current.gain.value = gainA;
       }
-      if (audioRefB.current) {
-        const volumeB = muteB ? 0 : Math.min(1, deckBMultiplier * masterMultiplier);
-        audioRefB.current.volume = volumeB;
+      
+      if (gainNodeB.current) {
+        const gainB = muteB || muteMaster ? 0 : deckBMultiplier * masterMultiplier;
+        gainNodeB.current.gain.value = gainB;
       }
     };
     
@@ -256,6 +291,42 @@ function App() {
         audioRef.current.src = audioUrl;
         setCurrentTrack(selectedTrack);
         
+        // Connect to Web Audio API for gain control
+        try {
+          if (audioContextRef.current) {
+            // Resume audio context on user interaction (required for iOS)
+            if (audioContextRef.current.state === 'suspended') {
+              await audioContextRef.current.resume();
+            }
+            
+            // Disconnect previous source if exists
+            const sourceNode = deck === 'A' ? sourceNodeA : sourceNodeB;
+            const gainNode = deck === 'A' ? gainNodeA : gainNodeB;
+            
+            if (sourceNode.current) {
+              try {
+                sourceNode.current.disconnect();
+              } catch (e) {
+                // Source might already be disconnected
+              }
+            }
+            
+            // Create new source and connect through gain node
+            const newSource = audioContextRef.current.createMediaElementSource(audioRef.current);
+            newSource.connect(gainNode.current);
+            
+            if (deck === 'A') {
+              sourceNodeA.current = newSource;
+            } else {
+              sourceNodeB.current = newSource;
+            }
+          }
+        } catch (e) {
+          console.log('Web Audio API connection error (will use standard volume):', e);
+          // Fallback to standard volume control
+          audioRef.current.volume = 1.0;
+        }
+        
         // Set up event listeners for the new track
         audioRef.current.onended = () => {
           setIsPlaying(false);
@@ -267,19 +338,6 @@ function App() {
         };
       }
       
-      // Set volume before playing
-      const getVolumeMultiplier = (sliderValue) => {
-        return sliderValue * 0.03; // 0-100 becomes 0-3
-      };
-      
-      if (deck === 'A') {
-        const volumeA = muteA ? 0 : Math.min(1, getVolumeMultiplier(deckAVolume) * getVolumeMultiplier(masterVolume));
-        audioRef.current.volume = volumeA;
-      } else {
-        const volumeB = muteB ? 0 : Math.min(1, getVolumeMultiplier(deckBVolume) * getVolumeMultiplier(masterVolume));
-        audioRef.current.volume = volumeB;
-      }
-      
       // Toggle play/pause
       if (isPlaying) {
         console.log('Pausing audio');
@@ -287,6 +345,10 @@ function App() {
         setIsPlaying(false);
       } else {
         console.log('Playing audio');
+        // Resume audio context if needed (for iOS)
+        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          await audioContextRef.current.resume();
+        }
         await audioRef.current.play();
         setIsPlaying(true);
         console.log('Audio playing successfully');
