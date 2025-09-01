@@ -13,18 +13,13 @@ import playlistManager from './utils/playlistManager'
 import iosFileHandler from './utils/iosFileHandler'
 import capacitorFileManager from './utils/capacitorFileManager'
 
+// These functions will be defined inside the App component
 const fadeInAPressed = () => {
   console.log("Fade In A Clicked!");
 };
 const fadeOutAPressed = () => {
   console.log("Fade Out A Clicked!");
 };
-const playAPressed = async () => {
-  console.log("Play A Clicked!");
-  if (selectedTrackA) {
-    await handlePlayPause('A');
-  }
-}; 
 const fadeNextAPressed = () => {
   console.log("Fade Next A Clicked!"); 
 };
@@ -34,12 +29,6 @@ const fadeInBPressed = () => {
 };
 const fadeOutBPressed = () => {
   console.log("Fade Out B Clicked!");
-};
-const playBPressed = async () => {
-  console.log("Play B Clicked!");
-  if (selectedTrackB) {
-    await handlePlayPause('B');
-  }
 };
 const fadeNextBPressed = () => {
   console.log("Fade Next B Clicked!");
@@ -154,6 +143,25 @@ function App() {
   const [currentTrackA, setCurrentTrackA] = useState(null);
   const [currentTrackB, setCurrentTrackB] = useState(null);
 
+  // Play button handlers
+  const playAPressed = async () => {
+    console.log("Play A Clicked!");
+    if (selectedTrackA) {
+      await handlePlayPause('A');
+    } else {
+      console.log("No track selected in Deck A");
+    }
+  };
+
+  const playBPressed = async () => {
+    console.log("Play B Clicked!");
+    if (selectedTrackB) {
+      await handlePlayPause('B');
+    } else {
+      console.log("No track selected in Deck B");
+    }
+  };
+
   // Initialize audio elements
   useEffect(() => {
     if (!audioRefA.current) {
@@ -178,6 +186,7 @@ function App() {
 
   // Handle play/pause for decks
   const handlePlayPause = async (deck) => {
+    console.log(`handlePlayPause called for deck ${deck}`);
     const audioRef = deck === 'A' ? audioRefA : audioRefB;
     const selectedTrack = deck === 'A' ? selectedTrackA : selectedTrackB;
     const currentTrack = deck === 'A' ? currentTrackA : currentTrackB;
@@ -185,7 +194,13 @@ function App() {
     const isPlaying = deck === 'A' ? isPlayingA : isPlayingB;
     const setIsPlaying = deck === 'A' ? setIsPlayingA : setIsPlayingB;
     
-    if (!audioRef.current || !selectedTrack) return;
+    console.log('Selected track:', selectedTrack);
+    console.log('Audio ref:', audioRef.current);
+    
+    if (!audioRef.current || !selectedTrack) {
+      console.log('Missing audioRef or selectedTrack');
+      return;
+    }
     
     try {
       // If it's a new track, load it
