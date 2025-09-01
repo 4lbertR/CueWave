@@ -153,7 +153,7 @@ button:focus-visible {
   bottom: 10vw;
   left: 39.6vw;
   transform: scale(150%);
-  text-align: center;
+  text-align: center; 
 } 
 
 .fade-slider-div label {
