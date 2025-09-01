@@ -667,14 +667,21 @@ function App() {
       const processImport = async (filesToImport) => {
         // First create playlist with placeholder durations for immediate display
         const playlistId = Date.now();
-        const initialTracks = filesToImport.map((file, index) => ({
-          id: playlistId + index + Math.random(),
-          name: file.name,
-          file: file,
-          duration: 'Loading...', // Placeholder duration
-          size: file.size,
-          type: file.type || 'audio/mpeg'
-        }));
+        const initialTracks = filesToImport.map((file, index) => {
+          const trackId = playlistId + index + Math.random();
+          // Store file object in memory for playback
+          fileObjectsRef.current.set(String(trackId), file);
+          fileObjectsRef.current.set(file.name, file);
+          
+          return {
+            id: trackId,
+            name: file.name,
+            file: file,
+            duration: 'Loading...', // Placeholder duration
+            size: file.size,
+            type: file.type || 'audio/mpeg'
+          };
+        });
         
         const playlist = {
           id: playlistId,
@@ -811,14 +818,21 @@ function App() {
             
             // Create playlist from imported files - show immediately then update durations
             const playlistId = Date.now();
-            const initialTracks = filesToImport.map((file, index) => ({
-              id: playlistId + index + Math.random(),
-              name: file.name,
-              file: file,
-              duration: 'Loading...',
-              size: file.size,
-              type: file.type || 'audio/mpeg'
-            }));
+            const initialTracks = filesToImport.map((file, index) => {
+              const trackId = playlistId + index + Math.random();
+              // Store file object in memory for playback
+              fileObjectsRef.current.set(String(trackId), file);
+              fileObjectsRef.current.set(file.name, file);
+              
+              return {
+                id: trackId,
+                name: file.name,
+                file: file,
+                duration: 'Loading...',
+                size: file.size,
+                type: file.type || 'audio/mpeg'
+              };
+            });
             
             const playlist = {
               id: playlistId,
@@ -855,14 +869,21 @@ function App() {
       } else {
         // No duplicates, create playlist immediately then calculate durations
         const playlistId = Date.now();
-        const initialTracks = newFiles.map((file, index) => ({
-          id: playlistId + index + Math.random(),
-          name: file.name,
-          file: file,
-          duration: 'Loading...',
-          size: file.size,
-          type: file.type || 'audio/mpeg'
-        }));
+        const initialTracks = newFiles.map((file, index) => {
+          const trackId = playlistId + index + Math.random();
+          // Store file object in memory for playback
+          fileObjectsRef.current.set(String(trackId), file);
+          fileObjectsRef.current.set(file.name, file);
+          
+          return {
+            id: trackId,
+            name: file.name,
+            file: file,
+            duration: 'Loading...',
+            size: file.size,
+            type: file.type || 'audio/mpeg'
+          };
+        });
         
         const playlist = {
           id: playlistId,
@@ -958,16 +979,38 @@ function App() {
     // Get uncategorized files
     const uncategorizedFiles = await capacitorFileManager.getUncategorizedFiles();
     
-    // Collect all files from library
-    const files = [...uncategorizedFiles]; // Start with uncategorized
+    // Use a Map to deduplicate files by name
+    const fileMap = new Map();
+    
+    // Add uncategorized files first
+    uncategorizedFiles.forEach(file => {
+      if (!fileMap.has(file.name)) {
+        fileMap.set(file.name, {
+          ...file,
+          id: file.id || Date.now() + Math.random(),
+          location: 'uncategorized'
+        });
+      }
+    });
+    
+    // Collect files from playlists and folders without duplicating
     const collectFiles = (item, location = '') => {
       if (item.tracks) {
         item.tracks.forEach(track => {
-          files.push({
-            ...track,
-            id: track.id || Date.now() + Math.random(),
-            location: location || item.name
-          });
+          // Only add if not already in the map
+          if (!fileMap.has(track.name)) {
+            // Store file object in memory if available
+            if (track.file && track.file instanceof File) {
+              fileObjectsRef.current.set(String(track.id), track.file);
+              fileObjectsRef.current.set(track.name, track.file);
+            }
+            
+            fileMap.set(track.name, {
+              ...track,
+              id: track.id || Date.now() + Math.random(),
+              location: location || item.name
+            });
+          }
         });
       }
       if (item.playlists) {
@@ -981,6 +1024,8 @@ function App() {
     library.playlists?.forEach(playlist => collectFiles(playlist));
     library.folders?.forEach(folder => collectFiles(folder));
     
+    // Convert map to array
+    const files = Array.from(fileMap.values());
     setAllFiles(files);
     console.log('Updated library:', library, 'Uncategorized:', uncategorizedFiles);
   };
