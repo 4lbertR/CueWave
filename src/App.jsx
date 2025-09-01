@@ -122,10 +122,11 @@ function App() {
     loadLibrary();
   }, []);
   
-  // Mixer volume states - all start at 50% (0.5) and unmuted
-  const [masterVolume, setMasterVolume] = useState(0.5);
-  const [deckAVolume, setDeckAVolume] = useState(0.5);
-  const [deckBVolume, setDeckBVolume] = useState(0.5);
+  // Mixer volume states - all start at 50% slider position (100% actual volume)
+  // Slider range: 0-100, where 50 = 100% volume, 0 = 0% volume, 100 = 300% volume
+  const [masterVolume, setMasterVolume] = useState(50);
+  const [deckAVolume, setDeckAVolume] = useState(50);
+  const [deckBVolume, setDeckBVolume] = useState(50);
   const [muteA, setMuteA] = useState(false);
   const [muteB, setMuteB] = useState(false);
   const [muteMaster, setMuteMaster] = useState(false);
@@ -174,11 +175,23 @@ function App() {
     
     // Set up volume controls
     const updateVolumes = () => {
+      // Convert slider position (0-100) to volume multiplier (0-3)
+      // 0 = 0%, 50 = 100% (1.0), 100 = 300% (3.0)
+      const getVolumeMultiplier = (sliderValue) => {
+        return sliderValue * 0.03; // 0-100 becomes 0-3
+      };
+      
+      const masterMultiplier = getVolumeMultiplier(masterVolume);
+      const deckAMultiplier = getVolumeMultiplier(deckAVolume);
+      const deckBMultiplier = getVolumeMultiplier(deckBVolume);
+      
       if (audioRefA.current) {
-        audioRefA.current.volume = muteA ? 0 : deckAVolume * masterVolume;
+        const volumeA = muteA ? 0 : Math.min(1, deckAMultiplier * masterMultiplier);
+        audioRefA.current.volume = volumeA;
       }
       if (audioRefB.current) {
-        audioRefB.current.volume = muteB ? 0 : deckBVolume * masterVolume;
+        const volumeB = muteB ? 0 : Math.min(1, deckBMultiplier * masterMultiplier);
+        audioRefB.current.volume = volumeB;
       }
     };
     
@@ -255,10 +268,16 @@ function App() {
       }
       
       // Set volume before playing
+      const getVolumeMultiplier = (sliderValue) => {
+        return sliderValue * 0.03; // 0-100 becomes 0-3
+      };
+      
       if (deck === 'A') {
-        audioRef.current.volume = muteA ? 0 : deckAVolume * masterVolume;
+        const volumeA = muteA ? 0 : Math.min(1, getVolumeMultiplier(deckAVolume) * getVolumeMultiplier(masterVolume));
+        audioRef.current.volume = volumeA;
       } else {
-        audioRef.current.volume = muteB ? 0 : deckBVolume * masterVolume;
+        const volumeB = muteB ? 0 : Math.min(1, getVolumeMultiplier(deckBVolume) * getVolumeMultiplier(masterVolume));
+        audioRef.current.volume = volumeB;
       }
       
       // Toggle play/pause
@@ -1409,12 +1428,14 @@ function App() {
             <input
               type="range"
               min="0"
-              max="1"
-              step="0.01"
+              max="100"
+              step="1"
               value={deckAVolume}
-              onChange={(e) => setDeckAVolume(parseFloat(e.target.value))}
+              onChange={(e) => setDeckAVolume(parseInt(e.target.value))}
               className="vertical-fader"
+              orient="vertical"
             />
+            <div className="volume-percentage">{Math.round(deckAVolume * 3)}%</div>
           </div>
           <button 
             className={`mute-button ${muteA ? 'active' : ''}`}
@@ -1430,12 +1451,14 @@ function App() {
             <input
               type="range"
               min="0"
-              max="1"
-              step="0.01"
+              max="100"
+              step="1"
               value={deckBVolume}
-              onChange={(e) => setDeckBVolume(parseFloat(e.target.value))}
+              onChange={(e) => setDeckBVolume(parseInt(e.target.value))}
               className="vertical-fader"
+              orient="vertical"
             />
+            <div className="volume-percentage">{Math.round(deckBVolume * 3)}%</div>
           </div>
           <button 
             className={`mute-button ${muteB ? 'active' : ''}`}
@@ -1451,12 +1474,14 @@ function App() {
             <input
               type="range"
               min="0"
-              max="1"
-              step="0.01"
+              max="100"
+              step="1"
               value={masterVolume}
-              onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
+              onChange={(e) => setMasterVolume(parseInt(e.target.value))}
               className="vertical-fader"
+              orient="vertical"
             />
+            <div className="volume-percentage">{Math.round(masterVolume * 3)}%</div>
           </div>
           <button 
             className={`mute-button ${muteMaster ? 'active' : ''}`}
