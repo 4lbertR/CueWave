@@ -124,6 +124,8 @@ function App() {
   const audioContextRef = useRef(null);
   const gainNodeA = useRef(null);
   const gainNodeB = useRef(null);
+  const fadeGainNodeA = useRef(null); // Separate gain node for fades
+  const fadeGainNodeB = useRef(null); // Separate gain node for fades
   const sourceNodeA = useRef(null);
   const sourceNodeB = useRef(null);
   const fadeIntervalA = useRef(null);
@@ -152,8 +154,8 @@ function App() {
     }
   };
 
-  // Fade functions
-  const fadeVolume = (deck, targetVolume, duration) => {
+  // Fade functions - uses separate fade gain node, not mixer sliders
+  const fadeVolume = (deck, targetMultiplier, duration) => {
     return new Promise((resolve) => {
       // Cancel any existing fade
       const fadeInterval = deck === 'A' ? fadeIntervalA : fadeIntervalB;
@@ -161,9 +163,14 @@ function App() {
         cancelAnimationFrame(fadeInterval.current);
       }
       
+      const fadeGainNode = deck === 'A' ? fadeGainNodeA.current : fadeGainNodeB.current;
+      if (!fadeGainNode) {
+        resolve();
+        return;
+      }
+      
       const startTime = Date.now();
-      const setVolume = deck === 'A' ? setDeckAVolume : setDeckBVolume;
-      const startVolume = deck === 'A' ? deckAVolume : deckBVolume;
+      const startValue = fadeGainNode.gain.value;
       
       const animate = () => {
         const elapsed = Date.now() - startTime;
@@ -171,9 +178,9 @@ function App() {
         
         // Use easing function for smooth fade
         const easedProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease-in-out
-        const currentVolume = startVolume + (targetVolume - startVolume) * easedProgress;
+        const currentValue = startValue + (targetMultiplier - startValue) * easedProgress;
         
-        setVolume(Math.round(currentVolume));
+        fadeGainNode.gain.value = currentValue;
         
         if (progress < 1) {
           fadeInterval.current = requestAnimationFrame(animate);
@@ -191,19 +198,25 @@ function App() {
   fadeInAPressed = async () => {
     console.log("Fade In A Starting");
     if (!isPlayingA && selectedTrackA) {
-      setDeckAVolume(0); // Start from 0
+      // Start with fade gain at 0
+      if (fadeGainNodeA.current) {
+        fadeGainNodeA.current.gain.value = 0;
+      }
       await handlePlayPause('A'); // Start playing
     }
-    await fadeVolume('A', 60, fadeDuration); // Fade to 100% (position 60)
+    await fadeVolume('A', 1.0, fadeDuration); // Fade to full volume
   };
 
   fadeInBPressed = async () => {
     console.log("Fade In B Starting");
     if (!isPlayingB && selectedTrackB) {
-      setDeckBVolume(0); // Start from 0
+      // Start with fade gain at 0
+      if (fadeGainNodeB.current) {
+        fadeGainNodeB.current.gain.value = 0;
+      }
       await handlePlayPause('B'); // Start playing
     }
-    await fadeVolume('B', 60, fadeDuration); // Fade to 100% (position 60)
+    await fadeVolume('B', 1.0, fadeDuration); // Fade to full volume
   };
 
   // Fade Out functions
@@ -213,6 +226,10 @@ function App() {
     if (isPlayingA) {
       await handlePlayPause('A'); // Stop playing after fade
     }
+    // Reset fade gain for next time
+    if (fadeGainNodeA.current) {
+      fadeGainNodeA.current.gain.value = 1.0;
+    }
   };
 
   fadeOutBPressed = async () => {
@@ -220,6 +237,10 @@ function App() {
     await fadeVolume('B', 0, fadeDuration);
     if (isPlayingB) {
       await handlePlayPause('B'); // Stop playing after fade
+    }
+    // Reset fade gain for next time
+    if (fadeGainNodeB.current) {
+      fadeGainNodeB.current.gain.value = 1.0;
     }
   };
 
@@ -229,22 +250,23 @@ function App() {
     const currentIndex = deckATracks.findIndex(track => track.id === selectedTrackA?.id);
     if (currentIndex >= 0 && currentIndex < deckATracks.length - 1) {
       // Start fading out current track
-      const fadeOutPromise = fadeVolume('A', 0, fadeDuration);
-      
-      // Wait for fade to complete
-      await fadeOutPromise;
+      await fadeVolume('A', 0, fadeDuration);
       
       // Select and play next track
       const nextTrack = deckATracks[currentIndex + 1];
       setSelectedTrackA(nextTrack);
-      setDeckAVolume(0);
+      
+      // Reset fade gain and start new track
+      if (fadeGainNodeA.current) {
+        fadeGainNodeA.current.gain.value = 0;
+      }
       
       // Small delay to ensure track is loaded
       setTimeout(async () => {
         if (!isPlayingA) {
           await handlePlayPause('A');
         }
-        await fadeVolume('A', 60, fadeDuration);
+        await fadeVolume('A', 1.0, fadeDuration);
       }, 100);
     }
   };
@@ -254,22 +276,23 @@ function App() {
     const currentIndex = deckBTracks.findIndex(track => track.id === selectedTrackB?.id);
     if (currentIndex >= 0 && currentIndex < deckBTracks.length - 1) {
       // Start fading out current track
-      const fadeOutPromise = fadeVolume('B', 0, fadeDuration);
-      
-      // Wait for fade to complete
-      await fadeOutPromise;
+      await fadeVolume('B', 0, fadeDuration);
       
       // Select and play next track
       const nextTrack = deckBTracks[currentIndex + 1];
       setSelectedTrackB(nextTrack);
-      setDeckBVolume(0);
+      
+      // Reset fade gain and start new track
+      if (fadeGainNodeB.current) {
+        fadeGainNodeB.current.gain.value = 0;
+      }
       
       // Small delay to ensure track is loaded
       setTimeout(async () => {
         if (!isPlayingB) {
           await handlePlayPause('B');
         }
-        await fadeVolume('B', 60, fadeDuration);
+        await fadeVolume('B', 1.0, fadeDuration);
       }, 100);
     }
   };
@@ -279,19 +302,24 @@ function App() {
     console.log("Crossfade A-B Starting");
     // Start B if not playing
     if (!isPlayingB && selectedTrackB) {
-      setDeckBVolume(0);
+      if (fadeGainNodeB.current) {
+        fadeGainNodeB.current.gain.value = 0;
+      }
       await handlePlayPause('B');
     }
     
     // Crossfade: A fades out, B fades in
     await Promise.all([
       fadeVolume('A', 0, fadeDuration),
-      fadeVolume('B', 60, fadeDuration)
+      fadeVolume('B', 1.0, fadeDuration)
     ]);
     
-    // Stop A after fade
+    // Stop A after fade and reset its fade gain
     if (isPlayingA) {
       await handlePlayPause('A');
+    }
+    if (fadeGainNodeA.current) {
+      fadeGainNodeA.current.gain.value = 1.0;
     }
   };
 
@@ -299,19 +327,24 @@ function App() {
     console.log("Crossfade B-A Starting");
     // Start A if not playing
     if (!isPlayingA && selectedTrackA) {
-      setDeckAVolume(0);
+      if (fadeGainNodeA.current) {
+        fadeGainNodeA.current.gain.value = 0;
+      }
       await handlePlayPause('A');
     }
     
     // Crossfade: B fades out, A fades in
     await Promise.all([
       fadeVolume('B', 0, fadeDuration),
-      fadeVolume('A', 60, fadeDuration)
+      fadeVolume('A', 1.0, fadeDuration)
     ]);
     
-    // Stop B after fade
+    // Stop B after fade and reset its fade gain
     if (isPlayingB) {
       await handlePlayPause('B');
+    }
+    if (fadeGainNodeB.current) {
+      fadeGainNodeB.current.gain.value = 1.0;
     }
   };
 
@@ -329,10 +362,13 @@ function App() {
         audioRefA.current = new Audio();
         audioRefA.current.crossOrigin = "anonymous";
         
-        // Create gain node for deck A
+        // Create gain nodes for deck A (mixer -> fade -> destination)
         if (!gainNodeA.current) {
           gainNodeA.current = audioContextRef.current.createGain();
-          gainNodeA.current.connect(audioContextRef.current.destination);
+          fadeGainNodeA.current = audioContextRef.current.createGain();
+          fadeGainNodeA.current.gain.value = 1.0; // Start at full volume
+          gainNodeA.current.connect(fadeGainNodeA.current);
+          fadeGainNodeA.current.connect(audioContextRef.current.destination);
         }
       }
       
@@ -340,10 +376,13 @@ function App() {
         audioRefB.current = new Audio();
         audioRefB.current.crossOrigin = "anonymous";
         
-        // Create gain node for deck B
+        // Create gain nodes for deck B (mixer -> fade -> destination)
         if (!gainNodeB.current) {
           gainNodeB.current = audioContextRef.current.createGain();
-          gainNodeB.current.connect(audioContextRef.current.destination);
+          fadeGainNodeB.current = audioContextRef.current.createGain();
+          fadeGainNodeB.current.gain.value = 1.0; // Start at full volume
+          gainNodeB.current.connect(fadeGainNodeB.current);
+          fadeGainNodeB.current.connect(audioContextRef.current.destination);
         }
       }
     };
