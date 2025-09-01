@@ -122,11 +122,11 @@ function App() {
     loadLibrary();
   }, []);
   
-  // Mixer volume states - all start at 50% slider position (100% actual volume)
-  // Slider range: 0-100, where 50 = 100% volume, 0 = 0% volume, 100 = 300% volume
-  const [masterVolume, setMasterVolume] = useState(50);
-  const [deckAVolume, setDeckAVolume] = useState(50);
-  const [deckBVolume, setDeckBVolume] = useState(50);
+  // Mixer volume states - all start at 60% slider position (100% actual volume)
+  // Slider range: 0-100, where 0-60 = 0-100% volume, 60-100 = 100-300% volume
+  const [masterVolume, setMasterVolume] = useState(60);
+  const [deckAVolume, setDeckAVolume] = useState(60);
+  const [deckBVolume, setDeckBVolume] = useState(60);
   const [muteA, setMuteA] = useState(false);
   const [muteB, setMuteB] = useState(false);
   const [muteMaster, setMuteMaster] = useState(false);
@@ -205,13 +205,35 @@ function App() {
     initAudio();
   }, []);
   
+  // Helper function to get volume percentage for display
+  const getVolumePercentage = (sliderValue) => {
+    if (sliderValue <= 60) {
+      // Linear mapping for 0-60 slider to 0-100%
+      return Math.round((sliderValue / 60) * 100);
+    } else {
+      // Exponential mapping for 60-100 slider to 100-300%
+      const normalizedPosition = (sliderValue - 60) / 40; // 0 to 1
+      const multiplier = 1.0 + (Math.exp(normalizedPosition * 1.5) - 1) * 2;
+      return Math.round(multiplier * 100);
+    }
+  };
+
   // Update volumes when sliders change
   useEffect(() => {
     const updateVolumes = () => {
-      // Convert slider position (0-100) to volume multiplier (0-3)
-      // 0 = 0%, 50 = 100% (1.0), 100 = 300% (3.0)
+      // Convert slider position (0-100) to volume multiplier with exponential curve
+      // 0-60 slider = 0-100% volume (0-1.0 multiplier)
+      // 60-100 slider = 100-300% volume (1.0-3.0 multiplier)
       const getVolumeMultiplier = (sliderValue) => {
-        return sliderValue * 0.03; // 0-100 becomes 0-3
+        if (sliderValue <= 60) {
+          // Linear mapping for 0-60 slider to 0-1.0 volume
+          return (sliderValue / 60) * 1.0;
+        } else {
+          // Exponential mapping for 60-100 slider to 1.0-3.0 volume
+          const normalizedPosition = (sliderValue - 60) / 40; // 0 to 1
+          // Use exponential curve: 1 + (e^(x*1.5) - 1) * 2
+          return 1.0 + (Math.exp(normalizedPosition * 1.5) - 1) * 2;
+        }
       };
       
       const masterMultiplier = getVolumeMultiplier(masterVolume);
@@ -1497,7 +1519,7 @@ function App() {
               className="vertical-fader"
               orient="vertical"
             />
-            <div className="volume-percentage">{Math.round(deckAVolume * 3)}%</div>
+            <div className="volume-percentage">{getVolumePercentage(deckAVolume)}%</div>
           </div>
           <button 
             className={`mute-button ${muteA ? 'active' : ''}`}
@@ -1520,7 +1542,7 @@ function App() {
               className="vertical-fader"
               orient="vertical"
             />
-            <div className="volume-percentage">{Math.round(deckBVolume * 3)}%</div>
+            <div className="volume-percentage">{getVolumePercentage(deckBVolume)}%</div>
           </div>
           <button 
             className={`mute-button ${muteB ? 'active' : ''}`}
@@ -1543,7 +1565,7 @@ function App() {
               className="vertical-fader"
               orient="vertical"
             />
-            <div className="volume-percentage">{Math.round(masterVolume * 3)}%</div>
+            <div className="volume-percentage">{getVolumePercentage(masterVolume)}%</div>
           </div>
           <button 
             className={`mute-button ${muteMaster ? 'active' : ''}`}
