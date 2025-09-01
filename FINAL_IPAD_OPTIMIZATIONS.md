@@ -11,7 +11,7 @@
 ### 2. **Improved Layout & Alignment**
 - ✅ Folders and playlists at same level are vertically aligned
 - ✅ Consistent indentation (40px per level)
-- ✅ Items sorted: folders first, then playlists alphabetically
+- ✅ Items sorted: folders first, then playlists alphabetically 
 
 ### 3. **iPad-Style Interactions**
 - ✅ **Full-width click to expand folders** (not just arrow)
