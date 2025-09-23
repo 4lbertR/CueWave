@@ -18,7 +18,7 @@ jobs:
           echo "${{ secrets.IOS_CERTIFICATE_P12 }}" | base64 --decode > certificate.p12
           echo "${{ secrets.IOS_PROVISIONING_PROFILE }}" | base64 --decode > profile.mobileprovision
 
-      - name: Debug decoded certificate
+      - name: Debug decoded certificate 
         run: |
           echo "${{ secrets.IOS_CERTIFICATE_P12 }}" 
           file certificate.p12
