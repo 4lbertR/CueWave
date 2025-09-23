@@ -20,7 +20,7 @@ jobs:
 
       - name: Debug decoded certificate
         run: |
-          echo "${{ secrets.IOS_CERTIFICATE_P12 }}"
+          echo "${{ secrets.IOS_CERTIFICATE_P12 }}" 
           file certificate.p12
           openssl pkcs12 -info -in certificate.p12 -nokeys -passin pass:"${{ secrets.IOS_CERTIFICATE_PASSWORD }}"
 
