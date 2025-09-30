@@ -86,7 +86,7 @@ struct PlaylistPicker: View {
             .padding()
         }
         .frame(width: 500)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 10)
     }
@@ -130,11 +130,9 @@ struct PlaylistPickerRow: View {
                 
                 Spacer()
                 
-                if let created = playlist.created {
-                    Text(created, style: .date)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Text(playlist.created, style: .date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             .padding(.vertical, 8)
             .padding(.horizontal)
