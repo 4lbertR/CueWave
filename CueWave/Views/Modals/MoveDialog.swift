@@ -70,7 +70,7 @@ struct MoveDialog: View {
         }
         .padding(30)
         .frame(width: 500)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 10)
     }
