@@ -95,7 +95,7 @@ struct EditPlaylistModal: View {
             .padding()
         }
         .frame(width: 600, height: 600)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 10)
     }
