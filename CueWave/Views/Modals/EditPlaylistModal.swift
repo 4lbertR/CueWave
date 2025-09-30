@@ -14,7 +14,7 @@ struct EditPlaylistModal: View {
                 $0.name.localizedCaseInsensitiveContains(searchText) 
             }
         }
-    }
+    } 
     
     var body: some View {
         VStack(spacing: 0) {
