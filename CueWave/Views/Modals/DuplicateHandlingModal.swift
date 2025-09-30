@@ -67,7 +67,7 @@ struct DuplicateHandlingModal: View {
         }
         .padding(30)
         .frame(width: 450)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 10)
     }
@@ -155,7 +155,7 @@ struct PlaylistDuplicateModal: View {
         }
         .padding(30)
         .frame(width: 500)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 10)
     }
@@ -226,7 +226,7 @@ struct FileDuplicateModal: View {
         }
         .padding(30)
         .frame(width: 600)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 10)
     }
