@@ -13,7 +13,7 @@ A professional DJ application built with Swift and SwiftUI for macOS and iOS.
 - **Responsive Design**: Adaptive UI with compact mixer mode 
 
 ## Project Structure
-
+ 
 ```
 CueWave/
 ├── CueWave/                    # Main application code
