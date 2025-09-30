@@ -9,8 +9,8 @@ A professional DJ application built with Swift and SwiftUI for macOS and iOS.
 - **Fade Controls**: Fade In, Fade Out, Fade to Next, and Crossfade capabilities
 - **Library Management**: Organize your music with playlists and folders
 - **File Import**: Import audio files and folders with duplicate handling
-- **Playlist Editor**: Create and edit playlists with track selection
-- **Responsive Design**: Adaptive UI with compact mixer mode
+- **Playlist Editor**: Create and edit playlists with  track selection
+- **Responsive Design**: Adaptive UI with compact mixer mode 
 
 ## Project Structure
 
