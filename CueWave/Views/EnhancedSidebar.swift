@@ -155,55 +155,56 @@ struct EnhancedSidebar: View {
         }
     }
     
-    @ViewBuilder
-    func FolderRow(folder: Folder, level: Int) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Image(systemName: expandedFolders.contains(folder.id) ? "chevron.down" : "chevron.right")
-                    .font(.caption)
-                    .frame(width: 20)
+    func FolderRow(folder: Folder, level: Int) -> AnyView {
+        AnyView(
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Image(systemName: expandedFolders.contains(folder.id) ? "chevron.down" : "chevron.right")
+                        .font(.caption)
+                        .frame(width: 20)
+                    
+                    Image(systemName: "folder")
+                    
+                    Text(folder.name)
+                    
+                    Spacer()
+                    
+                    Text("\(folder.playlists.count + folder.audioFiles.count)")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                }
+                .padding(.leading, CGFloat(level * 20))
+                .padding(.vertical, 4)
+                .padding(.horizontal)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation {
+                        if expandedFolders.contains(folder.id) {
+                            expandedFolders.remove(folder.id)
+                        } else {
+                            expandedFolders.insert(folder.id)
+                        }
+                    }
+                }
                 
-                Image(systemName: "folder")
-                
-                Text(folder.name)
-                
-                Spacer()
-                
-                Text("\(folder.playlists.count + folder.audioFiles.count)")
-                    .foregroundColor(.secondary)
-                    .font(.caption)
-            }
-            .padding(.leading, CGFloat(level * 20))
-            .padding(.vertical, 4)
-            .padding(.horizontal)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                withAnimation {
-                    if expandedFolders.contains(folder.id) {
-                        expandedFolders.remove(folder.id)
-                    } else {
-                        expandedFolders.insert(folder.id)
+                if expandedFolders.contains(folder.id) {
+                    // Show playlists
+                    ForEach(folder.playlists) { playlist in
+                        PlaylistRow(playlist: playlist, inFolder: true, level: level + 1)
+                    }
+                    
+                    // Show audio files
+                    ForEach(folder.audioFiles) { file in
+                        FileRow(file: file, level: level + 1)
+                    }
+                    
+                    // Show subfolders
+                    ForEach(folder.folders) { subfolder in
+                        FolderRow(folder: subfolder, level: level + 1)
                     }
                 }
             }
-            
-            if expandedFolders.contains(folder.id) {
-                // Show playlists
-                ForEach(folder.playlists) { playlist in
-                    PlaylistRow(playlist: playlist, inFolder: true, level: level + 1)
-                }
-                
-                // Show audio files
-                ForEach(folder.audioFiles) { file in
-                    FileRow(file: file, level: level + 1)
-                }
-                
-                // Show subfolders
-                ForEach(folder.folders) { subfolder in
-                    FolderRow(folder: subfolder, level: level + 1)
-                }
-            }
-        }
+        )
     }
     
     // Helper functions
