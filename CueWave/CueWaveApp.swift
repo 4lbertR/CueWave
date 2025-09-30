@@ -8,11 +8,15 @@ struct CueWaveApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appState)
+                #if os(macOS)
                 .frame(minWidth: 1024, idealWidth: 1280, maxWidth: .infinity,
                        minHeight: 768, idealHeight: 1024, maxHeight: .infinity)
+                #endif
         }
+        #if os(macOS)
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
+        #endif
     }
 }
 
